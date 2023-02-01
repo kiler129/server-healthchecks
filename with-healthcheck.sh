@@ -9,7 +9,7 @@ maxTime=10 # see option -m help
 maxRetry=5 # see option -r help
 
 # Script options
-version="2023020103"
+version="2023020104"
 updateUrl="https://raw.githubusercontent.com/kiler129/server-healthchecks/main/with-healthcheck.sh"
 homeUrl="https://github.com/kiler129/server-healthchecks"
 
@@ -32,16 +32,16 @@ showUsage () {
     echo "Usage: $_baseScript [OPTION]... <PING URL> <COMMAND> [OPT]..." 1>&2
     echo 1>&2
     echo "Ping options:" 1>&2
-    echo "  -t      Track run time (send ping for start & end)" 1>&2
-    echo "  -d      Include executed command output in ping" 1>&2
+    echo "  -T      Don't track run time (by default it sends ping for start & end)" 1>&2
+    echo "  -D      Don't include executed command output in ping" 1>&2
     echo "  -m $maxTime   Maximum amount of time (s) to wait fo ping to succeede" 1>&2
     echo "  -r $maxRetry    How many times (up to -m) ping should repeat" 1>&2
     echo "  -i      Send RunID (rid) in ping. Check HealthChecks docs for details." 1>&2
     echo "          (generated automatically; needs either /proc access or uuidgen binary)" 1>&2
     echo 1>&2
     echo "Exec options:" 1>&2
-    echo "  -s      Silence executed command output from being printed" 1>&2
-    echo "  -e      Exit with non-0 exit code if ping fails" 1>&2
+    echo "  -p      Print executed command output (by default it will be silneced)" 1>&2
+    echo "  -E      Exit with 0 exit code even if ping fails" 1>&2
     echo "          (the command will be run regardless of ping failure)" 1>&2
     echo "  -n      Dry run - don't run the command but just deliver the ping" 1>&2
     echo "          (you can use this to test parameters & this script, or use this" 1>&2
@@ -177,10 +177,10 @@ selfUpdate () {
 
 # ===============================================================
 #### Parse all options
-sendStart=0
-includeOutput=0
-silenceCmd=0
-passPingExit=0
+sendStart=1
+includeOutput=1
+silenceCmd=1
+passPingExit=1
 rid=""
 dryRun=0
 verboseMode=0
@@ -194,12 +194,12 @@ if [[ $argsNum -ge 1 ]]; then
     if [[ "$1" == "--version" ]]; then showVersion; exit 0; fi
 fi
 
-while getopts ':tdsem:r:invuh' opt; do
+while getopts ':TDpEm:r:invuh' opt; do
     case "$opt" in
-        t) sendStart=1 ;;
-        d) includeOutput=1 ;;
-        s) silenceCmd=1 ;;
-        e) passPingExit=1 ;;
+        T) sendStart=0 ;;
+        D) includeOutput=0 ;;
+        p) silenceCmd=0 ;;
+        E) passPingExit=0 ;;
         m) if [[ "$OPTARG" =~ [^0-9] ]]; then
                showUsageError "Invalid value for ping timeout (-m): \"$OPTARG\" is not an number"
            fi
