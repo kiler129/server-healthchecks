@@ -9,7 +9,7 @@ maxTime=10 # see option -m help
 maxRetry=5 # see option -r help
 
 # Script options
-version="2023020102"
+version="2023020103"
 updateUrl="https://raw.githubusercontent.com/kiler129/server-healthchecks/main/with-healthcheck.sh"
 homeUrl="https://github.com/kiler129/server-healthchecks"
 
@@ -166,6 +166,7 @@ selfUpdate () {
     vLog "New version detected - backing up & updating"
     cp "$_baseScript" "$_previous"
     chmod -x "$_previous"
+    set +o noclobber
     echo "$newVersion" >| "$_baseScript"
     chmod +x "$_baseScript"
 
