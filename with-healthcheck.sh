@@ -7,6 +7,9 @@ cd "$(dirname "$0")"
 # Defaults for options with values
 maxTime=10 # see option -m help
 maxRetry=5 # see option -r help
+
+# Script options
+version="2023020102"
 updateUrl="https://raw.githubusercontent.com/kiler129/server-healthchecks/main/with-healthcheck.sh"
 homeUrl="https://github.com/kiler129/server-healthchecks"
 
@@ -16,7 +19,7 @@ homeUrl="https://github.com/kiler129/server-healthchecks"
 # Prints: one-line version-unique string
 # Return: <none>
 showVersion () {
-    echo "HealthChecks script wrapper v2023020101" 1>&2
+    echo "HealthChecks script wrapper v$version" 1>&2
 }
 
 # Displays script usage
@@ -156,13 +159,14 @@ selfUpdate () {
     newVersion=$(curl -fS "$updateUrl")
     if [[ "$curVersion" == "$newVersion" ]]; then
         vLog "Current version is already up to date - nothing to do"
+        return
     fi
 
     local _previous="${_baseScript}_previous"
     vLog "New version detected - backing up & updating"
     cp "$_baseScript" "$_previous"
     chmod -x "$_previous"
-    echo "$newVersion" > "$_baseScript"
+    echo "$newVersion" >| "$_baseScript"
     chmod +x "$_baseScript"
 
     vLog "Update succesful. New version installed:"
