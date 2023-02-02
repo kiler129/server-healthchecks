@@ -9,7 +9,7 @@ maxTime=10 # see option -m help
 maxRetry=5 # see option -r help
 
 # Script options
-version="2023020104"
+version="2023020201"
 updateUrl="https://raw.githubusercontent.com/kiler129/server-healthchecks/main/with-healthcheck.sh"
 homeUrl="https://github.com/kiler129/server-healthchecks"
 
@@ -159,7 +159,7 @@ selfUpdate () {
     newVersion=$(curl -fS "$updateUrl")
     if [[ "$curVersion" == "$newVersion" ]]; then
         vLog "Current version is already up to date - nothing to do"
-        return
+        exit 0
     fi
 
     local _previous="${_baseScript}_previous"
@@ -219,7 +219,7 @@ while getopts ':TDpEm:r:invuh' opt; do
            selfUpdate ;;
         h) showUsage
            exit 0 ;;
-        ?) showUsageError "Invalid command option specified";;
+        ?) showUsageError "Invalid command option \"$OPTARG\" specified" ;;
     esac
 done
 shift "$(($OPTIND -1))"
@@ -261,7 +261,7 @@ cmdExitCode=0
 cmdOut=""
 if [[ $dryRun -ne 1 ]]; then
     vLog "Running command: $cmdToExec $@"
-    if ! command -v tee &> /dev/null || [[ $silenceCmd -eq 1 ]] || true; then
+    if ! command -v tee &> /dev/null || [[ $silenceCmd -eq 1 ]]; then
         vLog "Output streaming disabled (silence=$silenceCmd == 1 or tee unavailable)"
         cmdExitCode=0
         cmdOut=$("$cmdToExec" "$@" 2>&1) || cmdExitCode=$?
