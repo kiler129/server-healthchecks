@@ -10,7 +10,7 @@ maxTime=5
 maxRetry=0
 
 # Script options
-version="2023020101"
+version="2023020102"
 homeUrl="https://github.com/kiler129/server-healthchecks"
 updateUrl="https://raw.githubusercontent.com/kiler129/server-healthchecks/main/http-ping.sh"
 
@@ -28,7 +28,7 @@ showUsage () {
     echo "Usage: $_baseScript [OPTION]... CHECK_URL" 1>&2
     echo 1>&2
     echo "Options:" 1>&2
-    echo "  -c [codes]    List of comma-separated HTTP codes considered successful" 1>&2
+    echo "  -c <codes>    List of comma-separated HTTP codes considered successful" 1>&2
     echo "                Default: $okHttpCodes" 1>&2
     echo "  -p            Print output of the request"
     echo "  -i            HTTPS insecure mode - ignores SSL errors"
