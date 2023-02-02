@@ -4,7 +4,7 @@
 set -e -o errexit -o pipefail -o noclobber -o nounset
 cd "$(dirname "$0")"
 
-version="2023020201"
+version="2023020202"
 homeUrl="https://github.com/kiler129/server-healthchecks"
 updateUrl="https://raw.githubusercontent.com/kiler129/server-healthchecks/main/http-middleware.sh"
 httpPingUrl="https://raw.githubusercontent.com/kiler129/server-healthchecks/main/http-ping.sh"
@@ -139,7 +139,7 @@ selfUpdate () {
 while getopts ':e:uh' opt; do
     case "$opt" in
         e) source "${OPTARG}" ;;
-        u) if [[ $argsNum -gt 1 ]]; then
+        u) if [[ $# -gt 1 ]]; then
                # this is a safety measure to prevent accidental invocations with -u somewhere
                showUsageError "Self-update (-u) must NOT be called with any other arguments"
            fi
