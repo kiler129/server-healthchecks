@@ -4,8 +4,9 @@
 set -e -o errexit -o pipefail -o noclobber -o nounset
 cd "$(dirname "$0")"
 
-version="2023020101"
+version="2023020201"
 homeUrl="https://github.com/kiler129/server-healthchecks"
+updateUrl="https://raw.githubusercontent.com/kiler129/server-healthchecks/main/http-middleware.sh"
 httpPingUrl="https://raw.githubusercontent.com/kiler129/server-healthchecks/main/http-ping.sh"
 withHealthcheckUrl="https://raw.githubusercontent.com/kiler129/server-healthchecks/main/with-healthcheck.sh"
 
@@ -22,6 +23,7 @@ showUsage () {
     echo 1>&2
     echo "Options:" 1>&2
     echo "  -e <file>    File with a list environment variables to source (see help below)" 1>&2
+    echo "  -u           Self-update this script. This option must be used alone." 1>&2
     echo "  -h           Shows this help text"
     echo 1>&2
     echo "Configuration reference:" 1>&2
@@ -99,9 +101,49 @@ findTool () {
   return 1
 }
 
-while getopts ':e:h' opt; do
+
+# Updates this script from the update URL
+# WARNING: this function depends on global variable "updateUrl"
+# Params: <none>
+# Prints: logs
+# Return: direct exit 0 on success, or 1 on failure
+selfUpdate () {
+    local _baseScript=$(basename $0)
+    showVersion
+    vLog "Updating $_baseScript from $updateUrl"
+    if [[ ! -w "$_baseScript" ]]; then
+        vLog "Script file is not writeable!"
+        exit 1
+    fi
+
+    curVersion=$(cat "$_baseScript")
+    vLog "Downloading latest version..."
+    newVersion=$(curl -fS "$updateUrl")
+    if [[ "$curVersion" == "$newVersion" ]]; then
+        vLog "Current version is already up to date - nothing to do"
+        exit 0
+    fi
+
+    local _previous="${_baseScript}_previous"
+    vLog "New version detected - backing up & updating"
+    cp "$_baseScript" "$_previous"
+    chmod -x "$_previous"
+    set +o noclobber
+    echo "$newVersion" >| "$_baseScript"
+    chmod +x "$_baseScript"
+
+    vLog "Update successful. New version installed."
+    exit 0
+}
+
+while getopts ':e:uh' opt; do
     case "$opt" in
         e) source "${OPTARG}" ;;
+        u) if [[ $argsNum -gt 1 ]]; then
+               # this is a safety measure to prevent accidental invocations with -u somewhere
+               showUsageError "Self-update (-u) must NOT be called with any other arguments"
+           fi
+           selfUpdate ;;
         h) showUsage
            exit 0 ;;
         ?) showUsageError "Invalid command option \"${OPTARG}\" specified" ;;
