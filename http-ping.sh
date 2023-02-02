@@ -10,7 +10,7 @@ maxTime=5
 maxRetry=0
 
 # Script options
-version="2023020102"
+version="2023020201"
 homeUrl="https://github.com/kiler129/server-healthchecks"
 updateUrl="https://raw.githubusercontent.com/kiler129/server-healthchecks/main/http-ping.sh"
 
@@ -137,7 +137,7 @@ while getopts ':c:pim:r:uh' opt; do
                showUsageError "Invalid value for request max retries (-r): \"$OPTARG\" is not a number"
            fi
            maxRetry=$OPTARG ;;
-        u) if [[ $argsNum -gt 1 ]]; then
+        u) if [[ $# -gt 1 ]]; then
                # this is a safety measure to prevent accidental invocations with -u somewhere
                showUsageError "Self-update (-u) must NOT be called with any other arguments"
            fi
