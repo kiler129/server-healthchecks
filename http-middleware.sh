@@ -4,7 +4,7 @@
 set -e -o errexit -o pipefail -o noclobber -o nounset
 cd "$(dirname "$0")"
 
-version="2023020202"
+version="2023020203"
 homeUrl="https://github.com/kiler129/server-healthchecks"
 updateUrl="https://raw.githubusercontent.com/kiler129/server-healthchecks/main/http-middleware.sh"
 httpPingUrl="https://raw.githubusercontent.com/kiler129/server-healthchecks/main/http-ping.sh"
@@ -109,7 +109,6 @@ findTool () {
 # Return: direct exit 0 on success, or 1 on failure
 selfUpdate () {
     local _baseScript=$(basename $0)
-    showVersion
     vLog "Updating $_baseScript from $updateUrl"
     if [[ ! -w "$_baseScript" ]]; then
         vLog "Script file is not writeable!"
