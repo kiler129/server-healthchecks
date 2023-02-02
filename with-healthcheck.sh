@@ -9,7 +9,7 @@ maxTime=10 # see option -m help
 maxRetry=5 # see option -r help
 
 # Script options
-version="2023020201"
+version="2023020202"
 updateUrl="https://raw.githubusercontent.com/kiler129/server-healthchecks/main/with-healthcheck.sh"
 homeUrl="https://github.com/kiler129/server-healthchecks"
 
@@ -34,20 +34,24 @@ showUsage () {
     echo "Ping options:" 1>&2
     echo "  -T      Don't track run time (by default it sends ping for start & end)" 1>&2
     echo "  -D      Don't include executed command output in ping" 1>&2
-    echo "  -m $maxTime   Maximum amount of time (s) to wait fo ping to succeede" 1>&2
+    echo "  -m $maxTime   Maximum amount of time (s) to wait fo ping to succeed" 1>&2
     echo "  -r $maxRetry    How many times (up to -m) ping should repeat" 1>&2
     echo "  -i      Send RunID (rid) in ping. Check HealthChecks docs for details." 1>&2
     echo "          (generated automatically; needs either /proc access or uuidgen binary)" 1>&2
     echo 1>&2
     echo "Exec options:" 1>&2
-    echo "  -p      Print executed command output (by default it will be silneced)" 1>&2
-    echo "  -E      Exit with 0 exit code even if ping fails" 1>&2
-    echo "          (the command will be run regardless of ping failure)" 1>&2
+    echo "  -p      Print executed command output (by default it will be silenced)" 1>&2
+    echo "  -E      Ignore ping failure in determining this script exits code. I.e. exit" 1>&2
+    echo "          with 0 exit code even if ping fails (the command will be run" 1>&2
+    echo "          regardless of ping failure and it can fail, see -X)" 1>&2
+    echo "  -X      Ignore command failure in determining this script exits code. I.e. exit" 1>&2
+    echo "          with 0 exit code even if command fails. Also see -E." 1>&2
     echo "  -n      Dry run - don't run the command but just deliver the ping" 1>&2
     echo "          (you can use this to test parameters & this script, or use this" 1>&2
     echo "          script as a standalone ping script as the command is not checked)" 1>&2
     echo 1>&2
     echo "This script options:" 1>&2
+    echo "  -x      Always exits with"
     echo "  -v      Print script verbose logs. Normally the script is silent by itself" 1>&2
     echo "  -h      Display this help and exits, ignoring other options" 1>&2
     echo 1>&2
@@ -181,6 +185,7 @@ sendStart=1
 includeOutput=1
 silenceCmd=1
 passPingExit=1
+passCmdExit=1
 rid=""
 dryRun=0
 verboseMode=0
@@ -194,12 +199,13 @@ if [[ $argsNum -ge 1 ]]; then
     if [[ "$1" == "--version" ]]; then showVersion; exit 0; fi
 fi
 
-while getopts ':TDpEm:r:invuh' opt; do
+while getopts ':TDpEXm:r:invuh' opt; do
     case "$opt" in
         T) sendStart=0 ;;
         D) includeOutput=0 ;;
         p) silenceCmd=0 ;;
         E) passPingExit=0 ;;
+        X) passCmdExit=0 ;;
         m) if [[ "$OPTARG" =~ [^0-9] ]]; then
                showUsageError "Invalid value for ping timeout (-m): \"$OPTARG\" is not an number"
            fi
@@ -279,11 +285,11 @@ fi
 vLog "Command exec done w/exit: $cmdExitCode"
 
 # cmd failure overrides ping exit code, but cmd success shouldn't override ping fail
-if [[ $cmdExitCode -gt 0 ]]; then scriptExitCode=$cmdExitCode; fi
+if [[ $passCmdExit -eq 1 ]] && [[ $cmdExitCode -gt 0 ]]; then scriptExitCode=$cmdExitCode; fi
 
 vLog "Reporting job end w/code: $cmdExitCode"
 callPing "$cmdExitCode" "$cmdOut" || pingExitCode=$?
-if [[ $passPingExit -eq 1 ]] && [[ $pingExitCode -gt 0 ]] && [[ $cmdExitCode -eq 0 ]]; then
+if [[ $passPingExit -eq 1 ]] && [[ $pingExitCode -gt 0 ]] && [[ $scriptExitCode -eq 0 ]]; then
     scriptExitCode=$pingExitCode
 fi
 vLog "Computed exit: $scriptExitCode"
