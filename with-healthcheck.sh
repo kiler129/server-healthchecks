@@ -9,7 +9,7 @@ maxTime=10 # see option -m help
 maxRetry=5 # see option -r help
 
 # Script options
-version="2023020202"
+version="2023020203"
 updateUrl="https://raw.githubusercontent.com/kiler129/server-healthchecks/main/with-healthcheck.sh"
 homeUrl="https://github.com/kiler129/server-healthchecks"
 
@@ -288,7 +288,11 @@ vLog "Command exec done w/exit: $cmdExitCode"
 if [[ $passCmdExit -eq 1 ]] && [[ $cmdExitCode -gt 0 ]]; then scriptExitCode=$cmdExitCode; fi
 
 vLog "Reporting job end w/code: $cmdExitCode"
-callPing "$cmdExitCode" "$cmdOut" || pingExitCode=$?
+if [[ $includeOutput -eq 1 ]]; then
+  callPing "$cmdExitCode" "$cmdOut" || pingExitCode=$?
+else
+  callPing "$cmdExitCode" "" || pingExitCode=$?
+fi
 if [[ $passPingExit -eq 1 ]] && [[ $pingExitCode -gt 0 ]] && [[ $scriptExitCode -eq 0 ]]; then
     scriptExitCode=$pingExitCode
 fi
