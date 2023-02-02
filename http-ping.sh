@@ -10,7 +10,7 @@ maxTime=5
 maxRetry=0
 
 # Script options
-version="2023020201"
+version="2023020202"
 homeUrl="https://github.com/kiler129/server-healthchecks"
 updateUrl="https://raw.githubusercontent.com/kiler129/server-healthchecks/main/http-ping.sh"
 
@@ -95,7 +95,6 @@ callUrl () {
 # Return: direct exit 0 on success, or 1 on failure
 selfUpdate () {
     local _baseScript=$(basename $0)
-    showVersion
     vLog "Updating $_baseScript from $updateUrl"
     if [[ ! -w "$_baseScript" ]]; then
         vLog "Script file is not writeable!"
