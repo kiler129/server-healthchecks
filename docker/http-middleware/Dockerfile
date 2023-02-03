@@ -9,12 +9,12 @@ RUN apk add --no-cache \
     curl bash sed uuidgen procps tini
 
 COPY --link docker-entrypoint.sh /usr/local/bin/docker-entrypoint
-RUN chmod +x /usr/local/bin/docker-entrypoint
 
-RUN curl -o /app/http-ping.sh 'https://raw.githubusercontent.com/kiler129/server-healthchecks/main/http-ping.sh'
-RUN curl -o /app/with-healthcheck.sh 'https://raw.githubusercontent.com/kiler129/server-healthchecks/main/with-healthcheck.sh'
-RUN curl -o /app/http-middleware.sh 'https://raw.githubusercontent.com/kiler129/server-healthchecks/main/http-middleware.sh'
-RUN chmod +x /app/*.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint && \
+    curl -o /app/http-ping 'https://raw.githubusercontent.com/kiler129/server-healthchecks/main/http-ping.sh' && \
+    curl -o /app/with-healthcheck 'https://raw.githubusercontent.com/kiler129/server-healthchecks/main/with-healthcheck.sh' && \
+    curl -o /app/http-middleware 'https://raw.githubusercontent.com/kiler129/server-healthchecks/main/http-middleware.sh' && \
+    chmod +x /app/*
 
-ENTRYPOINT ["/sbin/tini", "-v", "--", "docker-entrypoint"]
-CMD ["bash", "/app/http-middleware.sh"]
+ENTRYPOINT ["/sbin/tini", "--", "docker-entrypoint"]
+CMD ["/app/http-middleware"]
