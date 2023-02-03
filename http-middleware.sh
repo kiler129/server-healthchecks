@@ -4,7 +4,7 @@
 set -e -o errexit -o pipefail -o noclobber -o nounset
 cd "$(dirname "$0")"
 
-version="2023020205"
+version="2023020206"
 homeUrl="https://github.com/kiler129/server-healthchecks"
 updateUrl="https://raw.githubusercontent.com/kiler129/server-healthchecks/main/http-middleware.sh"
 httpPingUrl="https://raw.githubusercontent.com/kiler129/server-healthchecks/main/http-ping.sh"
@@ -24,7 +24,7 @@ showUsage () {
     echo "Options:" 1>&2
     echo "  -e <file>    File with a list environment variables to source (see help below)" 1>&2
     echo "  -u           Self-update this script. This option must be used alone." 1>&2
-    echo "  -h           Shows this help text"
+    echo "  -h           Shows this help text" 1>&2
     echo 1>&2
     echo "Configuration reference:" 1>&2
     echo "This script is controlled with dynamic environment variables, as it's meant to" 1>&2
@@ -206,7 +206,7 @@ for((i=0; i<=$loopMax; i++)); do
 
       sleep "$checkInterval"
     done
-  ) | sed "s/^/[Job#$i] /" &
+  ) | sed -u "s/^/[Job#$i] /" &
 done
 
 if [[ $jobsFound -eq 0 ]]; then
