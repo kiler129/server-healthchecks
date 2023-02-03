@@ -4,7 +4,7 @@
 set -e -o errexit -o pipefail -o noclobber -o nounset
 cd "$(dirname "$0")"
 
-version="2023020203"
+version="2023020204"
 homeUrl="https://github.com/kiler129/server-healthchecks"
 updateUrl="https://raw.githubusercontent.com/kiler129/server-healthchecks/main/http-middleware.sh"
 httpPingUrl="https://raw.githubusercontent.com/kiler129/server-healthchecks/main/http-ping.sh"
@@ -160,6 +160,10 @@ for((i=0; i<=$loopMax; i++)); do
   checkUrl="CHECK_URL_$i"
   pingUrl="PING_URL_$i"
   if [[ -z "${!checkUrl-}" ]] || [[ -z "${!pingUrl-}" ]]; then
+    if [[ ! -z "${!checkUrl-}" ]] || [[ ! -z "${!pingUrl-}" ]]; then
+      # this is a common mistake when copy-pasting blocks ;)
+      echo "WARNING: both CHECK_URL_$i and PING_URL_$i are required, but only one of them was found - skipping $i"
+    fi
     continue
   fi
   jobsFound+=1
