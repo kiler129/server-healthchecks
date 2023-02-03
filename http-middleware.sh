@@ -4,7 +4,7 @@
 set -e -o errexit -o pipefail -o noclobber -o nounset
 cd "$(dirname "$0")"
 
-version="2023020204"
+version="2023020205"
 homeUrl="https://github.com/kiler129/server-healthchecks"
 updateUrl="https://raw.githubusercontent.com/kiler129/server-healthchecks/main/http-middleware.sh"
 httpPingUrl="https://raw.githubusercontent.com/kiler129/server-healthchecks/main/http-ping.sh"
@@ -109,29 +109,29 @@ findTool () {
 # Return: direct exit 0 on success, or 1 on failure
 selfUpdate () {
     local _baseScript=$(basename $0)
-    vLog "Updating $_baseScript from $updateUrl"
+    echo "Updating $_baseScript from $updateUrl"
     if [[ ! -w "$_baseScript" ]]; then
-        vLog "Script file is not writeable!"
+        echo "Script file is not writeable!"
         exit 1
     fi
 
     curVersion=$(cat "$_baseScript")
-    vLog "Downloading latest version..."
+    echo "Downloading latest version..."
     newVersion=$(curl -fS "$updateUrl")
     if [[ "$curVersion" == "$newVersion" ]]; then
-        vLog "Current version is already up to date - nothing to do"
+        echo "Current version is already up to date - nothing to do"
         exit 0
     fi
 
     local _previous="${_baseScript}_previous"
-    vLog "New version detected - backing up & updating"
+    echo "New version detected - backing up & updating"
     cp "$_baseScript" "$_previous"
     chmod -x "$_previous"
     set +o noclobber
     echo "$newVersion" >| "$_baseScript"
     chmod +x "$_baseScript"
 
-    vLog "Update successful. New version installed."
+    echo "Update successful. New version installed."
     exit 0
 }
 
