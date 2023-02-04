@@ -9,7 +9,7 @@ maxTime=10 # see option -m help
 maxRetry=5 # see option -r help
 
 # Script options
-version="2023020203"
+version="2023020301"
 updateUrl="https://raw.githubusercontent.com/kiler129/server-healthchecks/main/with-healthcheck.sh"
 homeUrl="https://github.com/kiler129/server-healthchecks"
 
@@ -51,7 +51,6 @@ showUsage () {
     echo "          script as a standalone ping script as the command is not checked)" 1>&2
     echo 1>&2
     echo "This script options:" 1>&2
-    echo "  -x      Always exits with"
     echo "  -v      Print script verbose logs. Normally the script is silent by itself" 1>&2
     echo "  -h      Display this help and exits, ignoring other options" 1>&2
     echo 1>&2
