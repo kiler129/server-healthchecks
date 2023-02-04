@@ -15,7 +15,7 @@ overview.
 
 ---
 
-### [`with-healthcheck`](with-healthchecks.sh) - automatically report status of any command
+### [`with-healthcheck`](with-healthcheck.sh) - automatically report status of any command
 A flexible wrapper script which can report status of any commands you execute, report their execution time, and more.
 
 The Healthcheck's [official documentation](https://healthchecks.io/docs/bash/) is a good start. However, it assumes that
