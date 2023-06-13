@@ -63,9 +63,12 @@ showUsage () {
     echo "  --help    Standard alias to -h. It needs to be the first option" 1>&2
     echo 1>&2
     echo "Examples: " 1>&2
-    echo "  $_baseScript -t -d https://example.com/ping/uuid /scripts/backup.sh -a" 1>&2
-    echo "   => Run backup.sh passing argument -a, with pings for start (-t) & stop, and include output (-d) in ping." 1>&2
+    echo "  $_baseScript https://example.com/ping/uuid /scripts/backup.sh -a" 1>&2
+    echo "   => Run backup.sh passing argument -a, with pings for start & stop, and include output in ping." 1>&2
     echo 1>&2
+    echo "  $_baseScript -T -D https://example.com/ping/uuid /scripts/backup.sh -a" 1>&2
+    echo "   => Run backup.sh passing argument -a, WITHOUT 1pings for start (-T) & stop, and DO NOT include output (-D) in ping." 1>&2
+    echo 1>&2    
     echo " $_baseScript -e -m 30 https://example.com/ping/uuid whatever" 1>&2
     echo "   => Send ping only taking no longer than 30s, exit with non-zero code if it fails" 1>&2
     echo 1>&2
