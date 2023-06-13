@@ -9,7 +9,7 @@ maxTime=10 # see option -m help
 maxRetry=5 # see option -r help
 
 # Script options
-version="2023020301"
+version="2023061201"
 updateUrl="https://raw.githubusercontent.com/kiler129/server-healthchecks/main/with-healthcheck.sh"
 homeUrl="https://github.com/kiler129/server-healthchecks"
 
