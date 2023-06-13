@@ -14,7 +14,7 @@
 set -e -o errexit -o pipefail -o noclobber -o nounset
 
 # We abbreiviate status as the full one for larger pools will be horrendously long
-zstatus=$(/sbin/zpool status "$@" | grep -E -e '^\s+?\w+:' | grep -v 'config:' | sed -r -e 's/^(\s+pool:)/\n\1/' | tail +2)
+zstatus=$(/sbin/zpool status "$@" | grep -E -e '^\s*?\w+:' | grep -v 'config:' | sed -r -e 's/^(\s+pool:)/\n\1/' | tail +2)
 echo "${zstatus}"
 
 # Grep will exit with non-zero if there are no lines NOT having "ONLINE". If this script is
