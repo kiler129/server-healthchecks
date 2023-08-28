@@ -49,12 +49,15 @@ contains some ping/status/identity endpoint you can query to see if a device/sys
 
 1. Queries a HTTP(S) endpoint
 2. Checks its HTTP status
-3. Reports to Healtchecks instance whether it was a success or a failure
-4. Repeats the process again in set intervals
+3. Checks response contents against a pattern
+4. Reports to Healtchecks instance whether it was a success or a failure
+5. Repeats the process again in set intervals
 
-With this you can monitor e.g. a Plex Media Server instance (`/identity` endpoint) runnin on a NAS. You can even report 
+With this you can monitor e.g. a Plex Media Server instance (`/identity` endpoint) running on a NAS. You can even report 
 status of your [self-hosted Healthchecks](https://github.com/healthchecks/healthchecks) installation to Healthchecks.io
-via `/api/v2/status/` endpoint :)
+via `/api/v2/status/` endpoint :) In addition, the `http-middleware` is meant to be scalable to a large number of checks
+from one container. However, please read its help message before configuring it as such, to minimize e.g. thundering
+herd problem.
 
 The HTTP Middleware is especially useful in containerized environment. It can easily be added as an additional service
 in `docker compose` and automatically report status of services to a Healthchecks instance. See the [`docker/`](docker/) 
