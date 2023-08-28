@@ -10,7 +10,7 @@ maxTime=5
 maxRetry=0
 
 # Script options
-version="2023020203"
+version="2023082701"
 homeUrl="https://github.com/kiler129/server-healthchecks"
 updateUrl="https://raw.githubusercontent.com/kiler129/server-healthchecks/main/http-ping.sh"
 
@@ -30,6 +30,9 @@ showUsage () {
     echo "Options:" 1>&2
     echo "  -c <codes>    List of comma-separated HTTP codes considered successful" 1>&2
     echo "                Default: $okHttpCodes" 1>&2
+    echo "  -g <pattern>  Consider success only if grep in pattern mode (-e) matches the output." 1>&2
+    echo "                For this option to work your system must provide grep/BusyBox with grep." 1>&2
+    echo "                The output is checked only if HTTP code indicates success." 1>&2
     echo "  -p            Print output of the request"
     echo "  -i            HTTPS insecure mode - ignores SSL errors"
     echo "  -m $maxTime          Maximum amount of time (s) to wait for HTTP server to respond" 1>&2
@@ -123,9 +126,11 @@ selfUpdate () {
 
 printOutput=0
 checkSsl=0
-while getopts ':c:pim:r:uh' opt; do
+outputMatch=''
+while getopts ':c:g:pim:r:uh' opt; do
     case "$opt" in
         c) okHttpCodes="$OPTARG" ;;
+        g) outputMatch="$OPTARG" ;;
         p) printOutput=1 ;;
         i) checkSsl=0 ;;
         m) if [[ "$OPTARG" =~ [^0-9] ]]; then
@@ -165,9 +170,18 @@ response=""
 httpCode=""
 errors=""
 callUrl "$checkUrl" $checkSsl $maxTime $maxRetry httpCode response errors
-if [[ " ${okHttpCodesArr[*]} " =~ " ${httpCode} " ]]; then
-  echo "Request succeeded with code $httpCode"
-  exitCode=0
+if [[ " ${okHttpCodesArr[*]} " =~ " ${httpCode} " ]]; then # the HTTP code indicates no error
+  if [[ -z "${outputMatch}" ]]; then # contents will not be checked
+    echo "Request succeeded with code $httpCode"
+    exitCode=0
+  elif echo "${response}" | grep -q -e "${outputMatch}" ; then # output matching requested & output matched
+    echo "Request succeeded with code $httpCode and matching contents"
+    exitCode=0
+  else # contents requested to be checked but it didn't match
+    echo "Request failed: the $httpCode indicated success but the contents did not match expected pattern \"${outputMatch}\""
+    exitCode=1
+  fi
+
 elif [[ "$httpCode" -eq "000" ]]; then
   if [[ -z "$errors" ]]; then
     echo "Request failed without a response - no additional details are available"
