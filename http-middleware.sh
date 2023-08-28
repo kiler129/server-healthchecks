@@ -4,7 +4,7 @@
 set -e -o errexit -o pipefail -o noclobber -o nounset
 cd "$(dirname "$0")"
 
-version="2023082701"
+version="2023082702"
 homeUrl="https://github.com/kiler129/server-healthchecks"
 updateUrl="https://raw.githubusercontent.com/kiler129/server-healthchecks/main/http-middleware.sh"
 httpPingUrl="https://raw.githubusercontent.com/kiler129/server-healthchecks/main/http-ping.sh"
@@ -209,7 +209,16 @@ for((i=0; i<=$loopMax; i++)); do
       "${withHealthcheckArgs[@]}" "${httpPingArgs[@]}" 2>&1 || exit=$?
       if [[ $exit -ne 0 ]]; then echo "WARNING: the healthcheck script failed!"; fi
 
-      sleep "$checkInterval"
+      exit=0
+      sleep "$checkInterval" &> /dev/null || exit=$?
+      if [[ $exit -ne 0 ]]; then
+        echo "WARNING: \"sleep $checkInterval\" command failed. Mostly likely you're using a VERY outdated"
+        echo "         shell that doesn't support time suffixes (e.g. bash on macOS)."
+        echo "         Either upgrade your shell or specify CHECK_INTERVAL_# in seconds, "
+        echo "         without a suffixes (e.g. CHECK_INTERVAL_0=5m => CHECK_INTERVAL_0=300)."
+        echo "Forcing 5 minutes wait as a workaround now." # this is so we don't hammer service in a loop
+        sleep 300
+      fi
     done
   ) | sed -u "s/^/[Job#$i] /" &
 done
