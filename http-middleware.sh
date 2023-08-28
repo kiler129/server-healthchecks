@@ -4,7 +4,7 @@
 set -e -o errexit -o pipefail -o noclobber -o nounset
 cd "$(dirname "$0")"
 
-version="2023082702"
+version="2023082703"
 homeUrl="https://github.com/kiler129/server-healthchecks"
 updateUrl="https://raw.githubusercontent.com/kiler129/server-healthchecks/main/http-middleware.sh"
 httpPingUrl="https://raw.githubusercontent.com/kiler129/server-healthchecks/main/http-ping.sh"
@@ -36,6 +36,9 @@ showUsage () {
     echo "                            it at 99 if you don't have >99 checks)" 1>&2
     echo "  MIDDLEWARE_DEBUG=0      - enables with-healthcheck util verbose mode and" 1>&2
     echo "                            forces printing of http-ping output" 1>&2
+    echo "  SPREAD_JITTER=10        - adds a random wait between 0 and number of seconds" 1>&2
+    echo "                            specified before each job is FIRST executed, to minimize" 1>&2
+    echo "                            thundering herd problem (i.e. self-DoS). Set to 0 to disable." 1>&2
     echo 1>&2
     echo "Dynamic variables can be set multiple times with a different number to add more" 1>&2
     echo "checks. Replace # in each variable name listed below with a number between 0 and" 1>&2
@@ -154,6 +157,7 @@ done
 
 loopMax="${MIDDLEWARE_CHECK_MAX:-99}"
 debugMode="${MIDDLEWARE_DEBUG:-0}"
+spreadJitter="${SPREAD_JITTER:-10}"
 httpPing=$(findTool "http-ping" "$httpPingUrl")
 withHealthcheck=$(findTool "with-healthcheck" "$withHealthcheckUrl")
 
@@ -200,6 +204,12 @@ for((i=0; i<=$loopMax; i++)); do
 
   checkInterval=${!checkInterval-"15m"}
   (
+    if [[ $spreadJitter -gt 0 ]]; then
+      jobJitter=$(( $RANDOM % ( $spreadJitter + 1 ) ))
+      echo "Job #$i will start in $jobJitter seconds to mitigate thundering herd"
+      sleep $jobJitter
+    fi
+
     echo "Job #$i started"
     if [[ $debugMode -eq 1 ]]; then
       echo "Command: ${withHealthcheckArgs[@]}" "${httpPingArgs[@]}"
