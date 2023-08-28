@@ -92,7 +92,7 @@ showUsageError () {
 # Return: <none>
 vLog () {
     if [[ $verboseMode -ne 1 ]]; then return; fi
-    echo "=> $1"
+    echo "=> $@"
 }
 
 # Generates UUIDv4
