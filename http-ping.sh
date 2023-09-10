@@ -10,7 +10,7 @@ maxTime=5
 maxRetry=0
 
 # Script options
-version="2023082701"
+version="2023091001"
 homeUrl="https://github.com/kiler129/server-healthchecks"
 updateUrl="https://raw.githubusercontent.com/kiler129/server-healthchecks/main/http-ping.sh"
 
@@ -148,7 +148,7 @@ while getopts ':c:g:pim:r:uh' opt; do
            selfUpdate ;;
         h) showUsage
            exit 0 ;;
-        ?) showUsageError "Invalid command option specified";;
+        ?) showUsageError "Invalid command option \"-${OPTARG}\" specified" ;;
     esac
 done
 shift "$(($OPTIND -1))"

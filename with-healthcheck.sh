@@ -9,7 +9,7 @@ maxTime=10 # see option -m help
 maxRetry=5 # see option -r help
 
 # Script options
-version="2023091002"
+version="2023091003"
 updateUrl="https://raw.githubusercontent.com/kiler129/server-healthchecks/main/with-healthcheck.sh"
 homeUrl="https://github.com/kiler129/server-healthchecks"
 
@@ -248,7 +248,7 @@ while getopts ':TDpEXm:r:isnvuh' opt; do
            selfUpdate ;;
         h) showUsage
            exit 0 ;;
-        ?) showUsageError "Invalid command option \"$OPTARG\" specified" ;;
+        ?) showUsageError "Invalid command option \"-${OPTARG}\" specified" ;;
     esac
 done
 shift "$(($OPTIND -1))"

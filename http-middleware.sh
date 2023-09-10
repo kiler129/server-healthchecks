@@ -4,7 +4,7 @@
 set -e -o errexit -o pipefail -o noclobber -o nounset
 cd "$(dirname "$0")"
 
-version="2023091001"
+version="2023091003"
 homeUrl="https://github.com/kiler129/server-healthchecks"
 updateUrl="https://raw.githubusercontent.com/kiler129/server-healthchecks/main/http-middleware.sh"
 httpPingUrl="https://raw.githubusercontent.com/kiler129/server-healthchecks/main/http-ping.sh"
@@ -151,7 +151,7 @@ while getopts ':e:uh' opt; do
            selfUpdate ;;
         h) showUsage
            exit 0 ;;
-        ?) showUsageError "Invalid command option \"${OPTARG}\" specified" ;;
+        ?) showUsageError "Invalid command option \"-${OPTARG}\" specified" ;;
     esac
 done
 
