@@ -64,6 +64,24 @@ The HTTP Middleware is especially useful in containerized environment. It can ea
 in `docker compose` and automatically report status of services to a Healthchecks instance. See the [`docker/`](docker/) 
 folder for details.
 
+#### Automatic fault tolerance
+In addition, the HTTP Middleware implements an optional fault-tolerance functionality. Normally, when a check is *not
+delivered at all* Healthchecks will allow for a [grace period](https://healthchecks.io/docs/configuring_checks/). When
+a check delivers a failure signal, the grace period does not apply and *the service is marked as failed right away*. In
+some cases however, intermittent failures are to be expected. One of such examples is scheduled periodic equipment 
+reboots.
+
+HTTP Middleware allows for suppression of reports to the ping server for up to the configured threshold, using `CHECK_FAILURE_THRESHOLD_#`
+option. Setting the value to 1, which is the default, will report failures instantly. Any value above 1 will cause 
+success to be reported instantly, while a failure signals will be delayed until at least a set number of consecutive 
+failures are accumulated. Subsequent failures, after the threshold is reached, will be delivered without a delay. The 
+counter will only reset once at least one success is reported.
+
+When `CHECK_FAILURE_THRESHOLD_#` is configured and a failure passing that threshold has occurred, the log will include 
+an additional note regarding the number of failures that occurred. In order to ensure fault tolerance doesn't trigger
+the notification of non-response, the [grace period](https://healthchecks.io/docs/configuring_checks/) has to be 
+configured to at least `CHECK_FAILURE_THRESHOLD_# * expected interval`.
+
 ---
 
 ### [`http-ping`](http-ping.sh) - check external service status

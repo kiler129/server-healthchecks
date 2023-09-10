@@ -4,7 +4,7 @@
 set -e -o errexit -o pipefail -o noclobber -o nounset
 cd "$(dirname "$0")"
 
-version="2023091003"
+version="2023091004"
 homeUrl="https://github.com/kiler129/server-healthchecks"
 updateUrl="https://raw.githubusercontent.com/kiler129/server-healthchecks/main/http-middleware.sh"
 httpPingUrl="https://raw.githubusercontent.com/kiler129/server-healthchecks/main/http-ping.sh"
@@ -69,7 +69,18 @@ showUsage () {
     echo "                                    for reasons other than response code being outside" 1>&2
     echo "                                    of CHECK_OK_CODES. This usually includes DNS and" 1>&2
     echo "                                    connection timeouts." 1>&2
-    echo "                                    Default value determined by http-ping.sh" 1>&2
+    echo " CHECK_FAILURE_THRESHOLD_#=1      - How many times the check has to fail before the failure " 1>&2
+    echo "                                    is reported to PING_URL. By default, which is recommended" 1>&2
+    echo "                                    in most cases, the threshold is 1; i.e. failures are reported" 1>&2
+    echo "                                    instantly. Setting this value >1 will cause success to be" 1>&2
+    echo "                                    reported instantly, while a failure signals will start to" 1>&2
+    echo "                                    be delivered only after configured number of consecutive" 1>&2
+    echo "                                    failures. Subsequent failures will be delivered without a" 1>&2
+    echo "                                    delay, until the counter is reset with array successful" 1>&2
+    echo "                                    check. The grace period configured for the ping server must" 1>&2
+    echo "                                    be configured to account for the threshold-introduced delay." 1>&2
+    echo "                                    When this option is used unexpected failures of \"with-healthcheck\"" 1>&2
+    echo "                                    cannot be distinguished from true HTTP endpoint failures." 1>&2
     echo " CHECK_INC_CONTENT_#=1            - Whether to include contents returned by CHECK_URL" 1>&2
     echo "                                    in the ping message. This option has no" 1>&2
     echo "                                    effect if PING_INC_LOG_#=0, as the generated output" 1>&2
@@ -175,7 +186,9 @@ for((i=0; i<=$loopMax; i++)); do
   fi
   jobsFound+=1
 
-  withHealthcheckArgs=("${withHealthcheck}" -T -E -X)
+  withHealthcheckArgs=("${withHealthcheck}" -T -E)
+  failureThreshold=1
+  failureCounter=0 # will count up; can go above $failureThreshold (for fault-tolerant mode)
   httpPingArgs=("${httpPing}")
   if [[ $debugMode -eq 1 ]]; then withHealthcheckArgs+=(-p -v); fi
 
@@ -188,18 +201,31 @@ for((i=0; i<=$loopMax; i++)); do
   checkInsecure="CHECK_INSECURE_$i"
   checkTimeout="CHECK_TIMEOUT_$i"
   checkkRetry="CHECK_RETRY_$i"
+  checkFailureThreshold="CHECK_FAILURE_THRESHOLD_$i"
   checkInterval="CHECK_INTERVAL_$i"
 
   if [[ "${!pingIncLog-1}" -ne 1 ]]; then withHealthcheckArgs+=(-D); fi
   if [[ ! -z "${!pingTimeout-}" ]]; then withHealthcheckArgs+=(-m "${!pingTimeout}"); fi
   if [[ ! -z "${!pingkRetry-}" ]]; then withHealthcheckArgs+=(-r "${!pingkRetry}"); fi
+  if [[ ! -z "${!checkFailureThreshold-}" ]]; then
+    if [[ "${!checkFailureThreshold-}" =~ ^[^0-9]$ ]] || [[ ${!checkFailureThreshold-} -le 0 ]]; then
+      echo "CHECK_FAILURE_THRESHOLD_$i must be a positive integer (got \"${!checkFailureThreshold-}\")"
+      showUsage
+      exit 1
+    fi
+    failureThreshold=${!checkFailureThreshold}
+  else
+     # command output should affect "with-healthcheck" exit code only in failure-tolerant mode, in order to detect
+     # potential unexpected "with-healthcheck" crashes. When fault-tolerance is desired, there isn't a practical way
+     # to distinguish these two
+    withHealthcheckArgs+=(-X)
+  fi
   if [[ ! -z "${!checkOkCodes-}" ]]; then httpPingArgs+=(-c "${!checkOkCodes}"); fi
   if [[ ! -z "${!checkMatchContent-}" ]]; then httpPingArgs+=(-g "${!checkMatchContent}"); fi
   if [[ "${!checkIncContent-1}" -eq 1 ]]; then httpPingArgs+=(-p); fi
   if [[ "${!checkInsecure-0}" -eq 1 ]]; then httpPingArgs+=(-i); fi
   if [[ ! -z "${!checkTimeout-}" ]]; then httpPingArgs+=(-m "${!checkTimeout}"); fi
   if [[ ! -z "${!checkkRetry-}" ]]; then httpPingArgs+=(-r "${!checkkRetry}"); fi
-  withHealthcheckArgs+=("${!pingUrl}")
   httpPingArgs+=("${!checkUrl}")
 
   checkInterval=${!checkInterval-"15m"}
@@ -215,12 +241,32 @@ for((i=0; i<=$loopMax; i++)); do
 
     echo "Job #$i started"
     if [[ $debugMode -eq 1 ]]; then
-      echo "Command: ${withHealthcheckArgs[@]}" "${httpPingArgs[@]}"
+      echo "Command base: ${withHealthcheckArgs[@]}" "${!pingUrl}" "${httpPingArgs[@]}"
     fi
     while :; do
       exit=0
-      "${withHealthcheckArgs[@]}" "${httpPingArgs[@]}" 2>&1 || exit=$?
-      if [[ $exit -ne 0 ]]; then echo "WARNING: the healthcheck script failed!"; fi
+      # If we can withstand >1 failure (i.e. fault-tolerance mode enabled and within threshold limits still) we add
+      # "-s" to the "with-healthcheck" to prevent it from pinging with failures. Otherwise
+      if [[ $(( $failureThreshold - $failureCounter )) -gt 1 ]]; then
+        if [[ $debugMode -eq 1 ]]; then
+          echo "Running with failure tolerance: failed $failureCounter times so far (will report at $failureThreshold)"
+        fi
+        "${withHealthcheckArgs[@]}" -s "${!pingUrl}" "${httpPingArgs[@]}" 2>&1 || exit=$?
+      else # either failure tolerance is disabled (threshold=1) OR counter indicates threshold-1 failures already
+        # always show the info message in debug mode, but also show it in non-debug when the job failed after threshold
+        if [[ $failureThreshold -gt 1 ]]; then
+          echo "Running in fault-tolerant mode: failed $failureCounter times so far; no tolerance left (threshold=$failureThreshold)"
+        elif [[ $debugMode -eq 1 ]]; then
+          echo "Running command w/o failure silencing"
+        fi
+        "${withHealthcheckArgs[@]}" "${!pingUrl}" "${httpPingArgs[@]}" 2>&1 || exit=$?
+      fi
+
+      if [[ $exit -eq 0 ]]; then
+        failureCounter=0
+      # fault-tolerance mode is disabled => it's the script error
+      elif [[ $failureThreshold -eq 1 ]]; then echo "WARNING: the healthcheck script failed w/code=$exit";
+      else ((++failureCounter)); fi
 
       exit=0
       sleep "$checkInterval" &> /dev/null || exit=$?
