@@ -264,7 +264,7 @@ else
 fi
 
 # If tee is available and -s wasn't specified we can stream the output; otherwise it
-# delievered after the command finishes if desired
+# delivered after the command finishes if desired
 cmdExitCode=0
 cmdOut=""
 if [[ $dryRun -ne 1 ]]; then
