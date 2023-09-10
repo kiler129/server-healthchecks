@@ -9,7 +9,7 @@ maxTime=10 # see option -m help
 maxRetry=5 # see option -r help
 
 # Script options
-version="2023091001"
+version="2023091002"
 updateUrl="https://raw.githubusercontent.com/kiler129/server-healthchecks/main/with-healthcheck.sh"
 homeUrl="https://github.com/kiler129/server-healthchecks"
 
@@ -38,6 +38,10 @@ showUsage () {
     echo "  -r $maxRetry      How many times (up to -m) ping should repeat" 1>&2
     echo "  -i        Send RunID (rid) in ping. Check HealthChecks docs for details." 1>&2
     echo "            (generated automatically; needs either /proc access or uuidgen binary)" 1>&2
+    echo "  -s        Silence failures/report success only. When specified it will behave like it" 1>&2
+    echo "            the check was never called, if the external command fails. This is useful" 1>&2
+    echo "            for handling intermittently-failing tasks that are expected to do so." 1>&2
+    echo "            Unless combined with -X, the exit code will reflect the job's status." 1>&2
     echo 1>&2
     echo "Exec options:" 1>&2
     echo "  -p        Print executed command output (by default it will be silenced)" 1>&2
@@ -190,6 +194,7 @@ silenceCmd=1
 passPingExit=1
 passCmdExit=1
 rid=""
+pingOnFailures=1
 dryRun=-1
 verboseMode=0
 
@@ -202,7 +207,7 @@ if [[ $argsNum -ge 1 ]]; then
     if [[ "$1" == "--version" ]]; then showVersion; exit 0; fi
 fi
 
-while getopts ':TDpEXm:r:invuh' opt; do
+while getopts ':TDpEXm:r:isnvuh' opt; do
     case "$opt" in
         T) sendStart=0 ;;
         D) includeOutput=0 ;;
@@ -218,6 +223,7 @@ while getopts ':TDpEXm:r:invuh' opt; do
            fi
            maxRetry=$OPTARG ;;
         i) rid=$(generateUuid) ;;
+        s) pingOnFailures=0 ;;
         n) # this uses a hack from https://stackoverflow.com/a/38697692 as getopts doesn't support optional arguments
            # also, in case this option was used as last one we don't want to sweep the first argument (URL in this case)
            #   as a value when -n is the last option, i.e. if it's not an integer we assume it's a non-value call
@@ -305,12 +311,19 @@ vLog "Command exec done w/exit: $cmdExitCode"
 # cmd failure overrides ping exit code, but cmd success shouldn't override ping fail
 if [[ $passCmdExit -eq 1 ]] && [[ $cmdExitCode -gt 0 ]]; then scriptExitCode=$cmdExitCode; fi
 
-vLog "Reporting job end w/code: $cmdExitCode"
-if [[ $includeOutput -eq 1 ]]; then
-  callPing "$cmdExitCode" "$cmdOut" || pingExitCode=$?
+# command status is usually reported regardless whether it failed or not
+# however, when failures are supposed to be silenced we shouldn't ping if command failed (but still ping for OK)
+if [[ $cmdExitCode -eq 0 ]] || [[ $pingOnFailures -eq 1 ]]; then
+  vLog "Reporting job end w/code: $cmdExitCode"
+  if [[ $includeOutput -eq 1 ]]; then
+    callPing "$cmdExitCode" "$cmdOut" || pingExitCode=$?
+  else
+    callPing "$cmdExitCode" "" || pingExitCode=$?
+  fi
 else
-  callPing "$cmdExitCode" "" || pingExitCode=$?
+  vLog "The command failed w/code: $cmdExitCode. The report will be suppressed (-s option passed)"
 fi
+
 if [[ $passPingExit -eq 1 ]] && [[ $pingExitCode -gt 0 ]] && [[ $scriptExitCode -eq 0 ]]; then
     scriptExitCode=$pingExitCode
 fi

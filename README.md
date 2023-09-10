@@ -38,6 +38,7 @@ Crontab example:
  - Auto-reporting RunIDs
  - Include executed command output if desired 
  - Forward or silence executed command output and status to crontab (i.e. no more `1>&2 /dev/null` ;))
+ - Support fault-tolerance/success-only reporting for "flaky" jobs that are meant to succeed *at least sometimes*  
 
 ---
 
