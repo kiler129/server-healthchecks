@@ -4,7 +4,7 @@
 set -e -o errexit -o pipefail -o noclobber -o nounset
 cd "$(dirname "$0")"
 
-version="2023082703"
+version="2023091001"
 homeUrl="https://github.com/kiler129/server-healthchecks"
 updateUrl="https://raw.githubusercontent.com/kiler129/server-healthchecks/main/http-middleware.sh"
 httpPingUrl="https://raw.githubusercontent.com/kiler129/server-healthchecks/main/http-ping.sh"
@@ -203,7 +203,10 @@ for((i=0; i<=$loopMax; i++)); do
   httpPingArgs+=("${!checkUrl}")
 
   checkInterval=${!checkInterval-"15m"}
+  trap '{ echo -e "\nMiddleware interrupted. Killing all jobs..." ; kill $(jobs -p) 2>/dev/null; }' EXIT
   (
+    trap "{ echo 'Terminated via parent EXIT'; exit; }" EXIT
+
     if [[ $spreadJitter -gt 0 ]]; then
       jobJitter=$(( $RANDOM % ( $spreadJitter + 1 ) ))
       echo "Job #$i will start in $jobJitter seconds to mitigate thundering herd"
@@ -222,7 +225,7 @@ for((i=0; i<=$loopMax; i++)); do
       exit=0
       sleep "$checkInterval" &> /dev/null || exit=$?
       if [[ $exit -ne 0 ]]; then
-        echo "WARNING: \"sleep $checkInterval\" command failed. Mostly likely you're using a VERY outdated"
+        echo "WARNING: \"sleep $checkInterval\" command failed (exit=$exit). Mostly likely you're using a VERY outdated"
         echo "         shell that doesn't support time suffixes (e.g. bash on macOS)."
         echo "         Either upgrade your shell or specify CHECK_INTERVAL_# in seconds, "
         echo "         without a suffixes (e.g. CHECK_INTERVAL_0=5m => CHECK_INTERVAL_0=300)."
