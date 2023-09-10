@@ -9,7 +9,7 @@ maxTime=10 # see option -m help
 maxRetry=5 # see option -r help
 
 # Script options
-version="2023061201"
+version="2023091001"
 updateUrl="https://raw.githubusercontent.com/kiler129/server-healthchecks/main/with-healthcheck.sh"
 homeUrl="https://github.com/kiler129/server-healthchecks"
 
@@ -32,27 +32,28 @@ showUsage () {
     echo "Usage: $_baseScript [OPTION]... <PING URL> <COMMAND> [OPT]..." 1>&2
     echo 1>&2
     echo "Ping options:" 1>&2
-    echo "  -T      Don't track run time (by default it sends ping for start & end)" 1>&2
-    echo "  -D      Don't include executed command output in ping" 1>&2
-    echo "  -m $maxTime   Maximum amount of time (s) to wait fo ping to succeed" 1>&2
-    echo "  -r $maxRetry    How many times (up to -m) ping should repeat" 1>&2
-    echo "  -i      Send RunID (rid) in ping. Check HealthChecks docs for details." 1>&2
-    echo "          (generated automatically; needs either /proc access or uuidgen binary)" 1>&2
+    echo "  -T        Don't track run time (by default it sends ping for start & end)" 1>&2
+    echo "  -D        Don't include executed command output in ping" 1>&2
+    echo "  -m $maxTime     Maximum amount of time (s) to wait fo ping to succeed" 1>&2
+    echo "  -r $maxRetry      How many times (up to -m) ping should repeat" 1>&2
+    echo "  -i        Send RunID (rid) in ping. Check HealthChecks docs for details." 1>&2
+    echo "            (generated automatically; needs either /proc access or uuidgen binary)" 1>&2
     echo 1>&2
     echo "Exec options:" 1>&2
-    echo "  -p      Print executed command output (by default it will be silenced)" 1>&2
-    echo "  -E      Ignore ping failure in determining this script exits code. I.e. exit" 1>&2
-    echo "          with 0 exit code even if ping fails (the command will be run" 1>&2
-    echo "          regardless of ping failure and it can fail, see -X)" 1>&2
-    echo "  -X      Ignore command failure in determining this script exits code. I.e. exit" 1>&2
-    echo "          with 0 exit code even if command fails. Also see -E." 1>&2
-    echo "  -n      Dry run - don't run the command but just deliver the ping" 1>&2
-    echo "          (you can use this to test parameters & this script, or use this" 1>&2
-    echo "          script as a standalone ping script as the command is not checked)" 1>&2
+    echo "  -p        Print executed command output (by default it will be silenced)" 1>&2
+    echo "  -E        Ignore ping failure in determining this script exits code. I.e. exit" 1>&2
+    echo "            with 0 exit code even if ping fails (the command will be run" 1>&2
+    echo "            regardless of ping failure and it can fail, see -X)" 1>&2
+    echo "  -X        Ignore command failure in determining this script exits code. I.e. exit" 1>&2
+    echo "            with 0 exit code even if command fails. Also see -E." 1>&2
+    echo "  -n[=code] Dry run - don't run the command but just deliver the ping" 1>&2
+    echo "            (you can use this to test parameters & this script, or use this" 1>&2
+    echo "            script as a standalone ping script as the command is not checked)." 1>&2
+    echo "            Optionally, you can specify simulated exits code (default is 0/success)." 1>&2
     echo 1>&2
     echo "This script options:" 1>&2
-    echo "  -v      Print script verbose logs. Normally the script is silent by itself" 1>&2
-    echo "  -h      Display this help and exits, ignoring other options" 1>&2
+    echo "  -v        Print script verbose logs. Normally the script is silent by itself" 1>&2
+    echo "  -h        Display this help and exits, ignoring other options" 1>&2
     echo 1>&2
     echo "Special:" 1>&2
     echo "  -u        Self-update this script. Implies -v. This option must be used alone." 1>&2
@@ -189,7 +190,7 @@ silenceCmd=1
 passPingExit=1
 passCmdExit=1
 rid=""
-dryRun=0
+dryRun=-1
 verboseMode=0
 
 # I'm avoid using getopt which is not available on some platforms
@@ -217,7 +218,21 @@ while getopts ':TDpEXm:r:invuh' opt; do
            fi
            maxRetry=$OPTARG ;;
         i) rid=$(generateUuid) ;;
-        n) dryRun=1 ;;
+        n) # this uses a hack from https://stackoverflow.com/a/38697692 as getopts doesn't support optional arguments
+           # also, in case this option was used as last one we don't want to sweep the first argument (URL in this case)
+           #   as a value when -n is the last option, i.e. if it's not an integer we assume it's a non-value call
+           # we're deliberately catching negative numbers to provide better user experience
+           peekNextOpt=${!OPTIND}
+           if [[ -n "${peekNextOpt}" ]] && [[ "${peekNextOpt}" =~ ^-?[0-9]+$ ]]; then
+               OPTIND=$((OPTIND + 1))
+               dryRun=$peekNextOpt
+           else
+               dryRun=0
+           fi
+
+           if [[ $dryRun -lt 0 ]] || [[ $dryRun -gt 255 ]]; then
+               showUsageError "Dry run (-n) value, if passed, must be a valid exit code (integer 0-255), but got \"${dryRun}\""
+           fi ;;
         v) verboseMode=1 ;;
         u) if [[ $argsNum -gt 1 ]]; then
                # this is a safety measure to prevent accidental invocations with -u somewhere
@@ -267,7 +282,7 @@ fi
 # delivered after the command finishes if desired
 cmdExitCode=0
 cmdOut=""
-if [[ $dryRun -ne 1 ]]; then
+if [[ $dryRun -eq -1 ]]; then # "-1" indicates disabled; any other value is a desired exit code
     vLog "Running command: $cmdToExec $@"
     if ! command -v tee &> /dev/null || [[ $silenceCmd -eq 1 ]]; then
         vLog "Output streaming disabled (silence=$silenceCmd == 1 or tee unavailable)"
@@ -282,7 +297,8 @@ if [[ $dryRun -ne 1 ]]; then
         silenceCmd=1 # output was already streamed
     fi
 else
-    vLog "Skipped command exec (dry mode)"
+    vLog "Skipped command exec (dry mode), simulating exit=$dryRun"
+    cmdExitCode=$dryRun
 fi
 vLog "Command exec done w/exit: $cmdExitCode"
 
