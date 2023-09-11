@@ -4,7 +4,7 @@
 set -e -o errexit -o pipefail -o noclobber -o nounset
 cd "$(dirname "$0")"
 
-version="2023091006"
+version="2023091007"
 homeUrl="https://github.com/kiler129/server-healthchecks"
 updateUrl="https://raw.githubusercontent.com/kiler129/server-healthchecks/main/http-middleware.sh"
 httpPingUrl="https://raw.githubusercontent.com/kiler129/server-healthchecks/main/http-ping.sh"
@@ -48,14 +48,14 @@ showUsage () {
     echo "Available dynamic variables: (those listed with values are optional)" 1>&2
     echo "  CHECK_URL_#                      - REQUIRED; http(s) URL to query" 1>&2
     echo "  PING_URL_#                       - REQUIRED; url to ping service as accepted by" 1>&2
-    echo "                                     with-healthcheck util" 1>&2
+    echo "                                     with-healthcheck util." 1>&2
     echo "  CHECK_INTERVAL_#=15m             - How ofter to visit CHECK_URL; accepts suffixes" 1>&2
     echo "                                     s/m/h/d for seconds/minutes/hours/days." 1>&2
     echo "                                     Fractions are supported but you can't combine" 1>&2
-    echo "                                     multiple different suffixes" 1>&2
+    echo "                                     multiple different suffixes." 1>&2
     echo "  CHECK_OK_CODES_#=<val>           - Comma-separated list of HTTP codes considered" 1>&2
     echo "                                     as \"success\" for CHECK_URL. Default value " 1>&2
-    echo "                                     determined by http-ping.sh" 1>&2
+    echo "                                     determined by \"http-ping\" if not set." 1>&2
     echo "  CHECK_MATCH_CONTENT_#=<pattern>  - Ensures returned request content matches \"grep -e\"" 1>&2
     echo "                                     pattern specified. Contents will only be matched on" 1>&2
     echo "                                     \"successful\" HTTP codes." 1>&2
@@ -64,11 +64,12 @@ showUsage () {
     echo "  CHECK_TIMEOUT_#=<num>            - Time in seconds. Total time allotted for the" 1>&2
     echo "                                     CHECK_URL response. The time includes ALL" 1>&2
     echo "                                     retry attempts. Default value determined by" 1>&2
-    echo "                                     http-ping.sh" 1>&2
+    echo "                                     \"http-ping\" if not set." 1>&2
     echo "  CHECK_RETRY_#=<num>              - How many times to retry if calling CHECK_URL fails" 1>&2
     echo "                                     for reasons other than response code being outside" 1>&2
     echo "                                     of CHECK_OK_CODES. This usually includes DNS and" 1>&2
-    echo "                                     connection timeouts." 1>&2
+    echo "                                     connection timeouts. Default value determined by" 1>&2
+    echo "                                     \"http-ping\" if not set." 1>&2
     echo "  CHECK_FAILURE_THRESHOLD_#=1      - How many times the check has to fail before the failure " 1>&2
     echo "                                     is reported to PING_URL. By default, which is recommended" 1>&2
     echo "                                     in most cases, the threshold is 1; i.e. failures are reported" 1>&2
@@ -84,17 +85,25 @@ showUsage () {
     echo "  CHECK_INC_CONTENT_#=1            - Whether to include contents returned by CHECK_URL" 1>&2
     echo "                                     in the ping message. This option has no" 1>&2
     echo "                                     effect if PING_INC_LOG_#=0, as the generated output" 1>&2
-    echo "                                     from http-ping will be discarded." 1>&2
+    echo "                                     from \"http-ping\" will be discarded." 1>&2
     echo "  PING_TIMEOUT_#=<num>             - Time in seconds. Total time allotted for the" 1>&2
     echo "                                     PING_URL response. The time includes ALL retry" 1>&2
     echo "                                     attempts. Default value determined by" 1>&2
-    echo "                                     with-healthcheck.sh" 1>&2
+    echo "                                     \"with-healthcheck\" if not set." 1>&2
     echo "  PING_RETRY_#=<num>               - How many times to retry if ping submission to" 1>&2
     echo "                                     PING_URL fails. The failure can be for any reason." 1>&2
     echo "                                     Default value determined by with-healthcheck.sh" 1>&2
-    echo "  PING_INC_LOG_#=1                 - Whether the ping should include http-ping.sh logs." 1>&2
-    echo "                                    Disabling this will also inherently disables logging" 1>&2
-    echo "                                    of the response content (see CHECK_INC_CONTENT)." 1>&2
+    echo "  PING_INC_LOG_#=1                 - Whether the ping should include \"http-ping\" logs." 1>&2
+    echo "                                     Disabling this will also inherently disables logging" 1>&2
+    echo "                                     of the response content (see CHECK_INC_CONTENT)." 1>&2
+    echo 1>&2
+    echo "Default values for dynamic variables:" 1>&2
+    echo "  Every optional dynamic variable (i.e. not CHECK_URL_# nor PING_URL_#) can have have a default" 1>&2
+    echo "  value assigned. It can be done by setting an environment variable with the same name, but " 1>&2
+    echo "  without numeric suffix (e.g. CHECK_TIMEOUT=10)." 1>&2
+    echo "  The explicit value set for a given instance (e.g. CHECK_TIMEOUT_0=2) has a higher priority" 1>&2
+    echo "  than the default for all instances (e.g. CHECK_TIMEOUT=10). The external defaults are only used" 1>&2
+    echo "  when neither value for the given instance nor default are set (e.g. \"http-ping\" default timeout)." 1>&2
     echo 1>&2
     echo "Found a bug? Have a question? Head out to $homeUrl"
 }
@@ -152,6 +161,23 @@ selfUpdate () {
     exit 0
 }
 
+# Resolves value from the config environment variable into a local variable. The result will be set to a variable named
+# passed by reference in the first parameter. If neither index-specific nor default variables are available the
+# "placeholder" value is used (by default empty string)
+#
+# Params: localVariableName configEnvName iterationIndex [placeholder='']
+# Prints: logs if debug
+# Returns: <none>
+resolveConfigValue () {
+  local -n result=$1
+  local iterationEnv="$2_$3"
+  result="${!iterationEnv:-${!2:-${4-}}}"
+
+  if [[ $debugMode -eq 1 ]]; then
+    echo -e "Resolved \"$1\"\t=>\t\"$result\"\t|\t$iterationEnv=${!iterationEnv:-<null>} / $2=${!2:-<null>} / placeholder=${4-<unset>}"
+  fi
+}
+
 while getopts ':e:uh' opt; do
     case "$opt" in
         e) source "${OPTARG}" ;;
@@ -187,46 +213,43 @@ for((i=0; i<=$loopMax; i++)); do
   jobsFound+=1
 
   withHealthcheckArgs=("${withHealthcheck}" -T -E)
-  failureThreshold=1
   failureCounter=0 # will count up; can go above $failureThreshold (for fault-tolerant mode)
   httpPingArgs=("${httpPing}")
   if [[ $debugMode -eq 1 ]]; then withHealthcheckArgs+=(-p -v); fi
 
-  checkInterval="CHECK_INTERVAL_$i"
-  checkOkCodes="CHECK_OK_CODES_$i"
-  checkMatchContent="CHECK_MATCH_CONTENT_$i"
-  checkInsecure="CHECK_INSECURE_$i"
-  checkTimeout="CHECK_TIMEOUT_$i"
-  checkRetry="CHECK_RETRY_$i"
-  checkFailureThreshold="CHECK_FAILURE_THRESHOLD_$i"
-  checkIncContent="CHECK_INC_CONTENT_$i"
-  pingTimeout="PING_TIMEOUT_$i"
-  pingRetry="PING_RETRY_$i"
-  pingIncLog="PING_INC_LOG_$i"
+  # This cannot be done without intermediates (unless eval is utilized), as bash doesn't allow indirection with
+  # composite variable. The best compromise is probably using a function (even if slow-ish).
+  resolveConfigValue checkInterval         CHECK_INTERVAL          $i   '15m'
+  resolveConfigValue checkOkCodes          CHECK_OK_CODES          $i
+  resolveConfigValue checkMatchContent     CHECK_MATCH_CONTENT     $i
+  resolveConfigValue checkInsecure         CHECK_INSECURE          $i   0
+  resolveConfigValue checkTimeout          CHECK_TIMEOUT           $i
+  resolveConfigValue checkRetry            CHECK_RETRY             $i
+  resolveConfigValue checkFailureThreshold CHECK_FAILURE_THRESHOLD $i   1
+  resolveConfigValue checkIncContent       CHECK_INC_CONTENT       $i   1
+  resolveConfigValue pingTimeout           PING_TIMEOUT            $i
+  resolveConfigValue pingRetry             PING_RETRY              $i
+  resolveConfigValue pingIncLog            PING_INC_LOG            $i   1
 
-  checkInterval=${!checkInterval-"15m"}
-  if [[ ! -z "${!checkOkCodes-}" ]]; then httpPingArgs+=(-c "${!checkOkCodes}"); fi
-  if [[ ! -z "${!checkMatchContent-}" ]]; then httpPingArgs+=(-g "${!checkMatchContent}"); fi
-  if [[ "${!checkInsecure-0}" -eq 1 ]]; then httpPingArgs+=(-i); fi
-  if [[ ! -z "${!checkTimeout-}" ]]; then httpPingArgs+=(-m "${!checkTimeout}"); fi
-  if [[ ! -z "${!checkRetry-}" ]]; then httpPingArgs+=(-r "${!checkRetry}"); fi
-  if [[ ! -z "${!checkFailureThreshold-}" ]]; then
-    if [[ "${!checkFailureThreshold-}" =~ ^[^0-9]$ ]] || [[ ${!checkFailureThreshold-} -le 0 ]]; then
-      echo "CHECK_FAILURE_THRESHOLD_$i must be a positive integer (got \"${!checkFailureThreshold-}\")"
-      showUsage
-      exit 1
-    fi
-    failureThreshold=${!checkFailureThreshold}
-  else
-     # command output should affect "with-healthcheck" exit code only in failure-tolerant mode, in order to detect
-     # potential unexpected "with-healthcheck" crashes. When fault-tolerance is desired, there isn't a practical way
-     # to distinguish these two
+  if [[ -n "$checkOkCodes" ]];      then httpPingArgs+=(-c "$checkOkCodes"); fi
+  if [[ -n "$checkMatchContent" ]]; then httpPingArgs+=(-g "$checkMatchContent"); fi
+  if [[ "$checkInsecure" -eq 1 ]];  then httpPingArgs+=(-i); fi
+  if [[ -n "$checkTimeout" ]];      then httpPingArgs+=(-m "$checkTimeout"); fi
+  if [[ -n "$checkRetry" ]];        then httpPingArgs+=(-r "$checkRetry"); fi
+  if [[ "$checkFailureThreshold" == '1' ]]; then # deliberate lexical comparison to avoid crashes with e.g. "3a" value
+    # command output should affect "with-healthcheck" exit code only in failure-tolerant mode, in order to detect
+    # potential unexpected "with-healthcheck" crashes. When fault-tolerance is desired, there isn't a practical way
+    # to distinguish these two
     withHealthcheckArgs+=(-X)
+  elif [[ ! "$checkFailureThreshold" =~ ^[0-9]$ ]] || [[ "$checkFailureThreshold" -le 0 ]]; then
+    echo "Check failure threshold must be a positive integer (got \"$checkFailureThreshold\" for job #$i)"
+    showUsage
+    exit 1
   fi
-  if [[ "${!checkIncContent-1}" -eq 1 ]]; then httpPingArgs+=(-p); fi
-  if [[ ! -z "${!pingTimeout-}" ]]; then withHealthcheckArgs+=(-m "${!pingTimeout}"); fi
-  if [[ ! -z "${!pingRetry-}" ]]; then withHealthcheckArgs+=(-r "${!pingRetry}"); fi
-  if [[ "${!pingIncLog-1}" -ne 1 ]]; then withHealthcheckArgs+=(-D); fi
+  if [[ "$checkIncContent" -eq 1 ]]; then httpPingArgs+=(-p); fi
+  if [[ -n "$pingTimeout" ]];        then withHealthcheckArgs+=(-m "$pingTimeout"); fi
+  if [[ -n "$pingRetry" ]];          then withHealthcheckArgs+=(-r "$pingRetry"); fi
+  if [[ "$pingIncLog" -ne 1 ]];      then withHealthcheckArgs+=(-D); fi
   httpPingArgs+=("${!checkUrl}")
 
   trap '{ echo -e "\nMiddleware interrupted. Killing all jobs..." ; kill $(jobs -p) 2>/dev/null; }' EXIT
@@ -247,15 +270,15 @@ for((i=0; i<=$loopMax; i++)); do
       exit=0
       # If we can withstand >1 failure (i.e. fault-tolerance mode enabled and within threshold limits still) we add
       # "-s" to the "with-healthcheck" to prevent it from pinging with failures. Otherwise
-      if [[ $(( $failureThreshold - $failureCounter )) -gt 1 ]]; then
+      if [[ $(( $checkFailureThreshold - $failureCounter )) -gt 1 ]]; then
         if [[ $debugMode -eq 1 ]]; then
-          echo "Running with failure tolerance: failed $failureCounter times so far (will report at $failureThreshold)"
+          echo "Running with failure tolerance: failed $failureCounter times so far (will report at $checkFailureThreshold)"
         fi
         "${withHealthcheckArgs[@]}" -s "${!pingUrl}" "${httpPingArgs[@]}" 2>&1 || exit=$?
       else # either failure tolerance is disabled (threshold=1) OR counter indicates threshold-1 failures already
         # always show the info message in debug mode, but also show it in non-debug when the job failed after threshold
-        if [[ $failureThreshold -gt 1 ]]; then
-          echo "Running in fault-tolerant mode: failed $failureCounter times so far; no tolerance left (threshold=$failureThreshold)"
+        if [[ $checkFailureThreshold -gt 1 ]]; then
+          echo "Running in fault-tolerant mode: failed $failureCounter times so far; no tolerance left (threshold=$checkFailureThreshold)"
         elif [[ $debugMode -eq 1 ]]; then
           echo "Running command w/o failure silencing"
         fi
@@ -265,7 +288,7 @@ for((i=0; i<=$loopMax; i++)); do
       if [[ $exit -eq 0 ]]; then
         failureCounter=0
       # fault-tolerance mode is disabled => it's the script error
-      elif [[ $failureThreshold -eq 1 ]]; then echo "WARNING: the healthcheck script failed w/code=$exit";
+      elif [[ $checkFailureThreshold -eq 1 ]]; then echo "WARNING: the healthcheck script failed w/code=$exit";
       else ((++failureCounter)); fi
 
       exit=0
