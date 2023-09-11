@@ -4,7 +4,7 @@
 set -e -o errexit -o pipefail -o noclobber -o nounset
 cd "$(dirname "$0")"
 
-version="2023091005"
+version="2023091006"
 homeUrl="https://github.com/kiler129/server-healthchecks"
 updateUrl="https://raw.githubusercontent.com/kiler129/server-healthchecks/main/http-middleware.sh"
 httpPingUrl="https://raw.githubusercontent.com/kiler129/server-healthchecks/main/http-ping.sh"
@@ -197,11 +197,11 @@ for((i=0; i<=$loopMax; i++)); do
   checkMatchContent="CHECK_MATCH_CONTENT_$i"
   checkInsecure="CHECK_INSECURE_$i"
   checkTimeout="CHECK_TIMEOUT_$i"
-  checkkRetry="CHECK_RETRY_$i"
+  checkRetry="CHECK_RETRY_$i"
   checkFailureThreshold="CHECK_FAILURE_THRESHOLD_$i"
   checkIncContent="CHECK_INC_CONTENT_$i"
   pingTimeout="PING_TIMEOUT_$i"
-  pingkRetry="PING_RETRY_$i"
+  pingRetry="PING_RETRY_$i"
   pingIncLog="PING_INC_LOG_$i"
 
   checkInterval=${!checkInterval-"15m"}
@@ -209,7 +209,7 @@ for((i=0; i<=$loopMax; i++)); do
   if [[ ! -z "${!checkMatchContent-}" ]]; then httpPingArgs+=(-g "${!checkMatchContent}"); fi
   if [[ "${!checkInsecure-0}" -eq 1 ]]; then httpPingArgs+=(-i); fi
   if [[ ! -z "${!checkTimeout-}" ]]; then httpPingArgs+=(-m "${!checkTimeout}"); fi
-  if [[ ! -z "${!checkkRetry-}" ]]; then httpPingArgs+=(-r "${!checkkRetry}"); fi
+  if [[ ! -z "${!checkRetry-}" ]]; then httpPingArgs+=(-r "${!checkRetry}"); fi
   if [[ ! -z "${!checkFailureThreshold-}" ]]; then
     if [[ "${!checkFailureThreshold-}" =~ ^[^0-9]$ ]] || [[ ${!checkFailureThreshold-} -le 0 ]]; then
       echo "CHECK_FAILURE_THRESHOLD_$i must be a positive integer (got \"${!checkFailureThreshold-}\")"
@@ -225,7 +225,7 @@ for((i=0; i<=$loopMax; i++)); do
   fi
   if [[ "${!checkIncContent-1}" -eq 1 ]]; then httpPingArgs+=(-p); fi
   if [[ ! -z "${!pingTimeout-}" ]]; then withHealthcheckArgs+=(-m "${!pingTimeout}"); fi
-  if [[ ! -z "${!pingkRetry-}" ]]; then withHealthcheckArgs+=(-r "${!pingkRetry}"); fi
+  if [[ ! -z "${!pingRetry-}" ]]; then withHealthcheckArgs+=(-r "${!pingRetry}"); fi
   if [[ "${!pingIncLog-1}" -ne 1 ]]; then withHealthcheckArgs+=(-D); fi
   httpPingArgs+=("${!checkUrl}")
 
