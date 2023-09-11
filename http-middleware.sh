@@ -4,7 +4,7 @@
 set -e -o errexit -o pipefail -o noclobber -o nounset
 cd "$(dirname "$0")"
 
-version="2023091004"
+version="2023091005"
 homeUrl="https://github.com/kiler129/server-healthchecks"
 updateUrl="https://raw.githubusercontent.com/kiler129/server-healthchecks/main/http-middleware.sh"
 httpPingUrl="https://raw.githubusercontent.com/kiler129/server-healthchecks/main/http-ping.sh"
@@ -192,21 +192,24 @@ for((i=0; i<=$loopMax; i++)); do
   httpPingArgs=("${httpPing}")
   if [[ $debugMode -eq 1 ]]; then withHealthcheckArgs+=(-p -v); fi
 
-  pingIncLog="PING_INC_LOG_$i"
-  pingTimeout="PING_TIMEOUT_$i"
-  pingkRetry="PING_RETRY_$i"
+  checkInterval="CHECK_INTERVAL_$i"
   checkOkCodes="CHECK_OK_CODES_$i"
   checkMatchContent="CHECK_MATCH_CONTENT_$i"
-  checkIncContent="CHECK_INC_CONTENT_$i"
   checkInsecure="CHECK_INSECURE_$i"
   checkTimeout="CHECK_TIMEOUT_$i"
   checkkRetry="CHECK_RETRY_$i"
   checkFailureThreshold="CHECK_FAILURE_THRESHOLD_$i"
-  checkInterval="CHECK_INTERVAL_$i"
+  checkIncContent="CHECK_INC_CONTENT_$i"
+  pingTimeout="PING_TIMEOUT_$i"
+  pingkRetry="PING_RETRY_$i"
+  pingIncLog="PING_INC_LOG_$i"
 
-  if [[ "${!pingIncLog-1}" -ne 1 ]]; then withHealthcheckArgs+=(-D); fi
-  if [[ ! -z "${!pingTimeout-}" ]]; then withHealthcheckArgs+=(-m "${!pingTimeout}"); fi
-  if [[ ! -z "${!pingkRetry-}" ]]; then withHealthcheckArgs+=(-r "${!pingkRetry}"); fi
+  checkInterval=${!checkInterval-"15m"}
+  if [[ ! -z "${!checkOkCodes-}" ]]; then httpPingArgs+=(-c "${!checkOkCodes}"); fi
+  if [[ ! -z "${!checkMatchContent-}" ]]; then httpPingArgs+=(-g "${!checkMatchContent}"); fi
+  if [[ "${!checkInsecure-0}" -eq 1 ]]; then httpPingArgs+=(-i); fi
+  if [[ ! -z "${!checkTimeout-}" ]]; then httpPingArgs+=(-m "${!checkTimeout}"); fi
+  if [[ ! -z "${!checkkRetry-}" ]]; then httpPingArgs+=(-r "${!checkkRetry}"); fi
   if [[ ! -z "${!checkFailureThreshold-}" ]]; then
     if [[ "${!checkFailureThreshold-}" =~ ^[^0-9]$ ]] || [[ ${!checkFailureThreshold-} -le 0 ]]; then
       echo "CHECK_FAILURE_THRESHOLD_$i must be a positive integer (got \"${!checkFailureThreshold-}\")"
@@ -220,15 +223,12 @@ for((i=0; i<=$loopMax; i++)); do
      # to distinguish these two
     withHealthcheckArgs+=(-X)
   fi
-  if [[ ! -z "${!checkOkCodes-}" ]]; then httpPingArgs+=(-c "${!checkOkCodes}"); fi
-  if [[ ! -z "${!checkMatchContent-}" ]]; then httpPingArgs+=(-g "${!checkMatchContent}"); fi
   if [[ "${!checkIncContent-1}" -eq 1 ]]; then httpPingArgs+=(-p); fi
-  if [[ "${!checkInsecure-0}" -eq 1 ]]; then httpPingArgs+=(-i); fi
-  if [[ ! -z "${!checkTimeout-}" ]]; then httpPingArgs+=(-m "${!checkTimeout}"); fi
-  if [[ ! -z "${!checkkRetry-}" ]]; then httpPingArgs+=(-r "${!checkkRetry}"); fi
+  if [[ ! -z "${!pingTimeout-}" ]]; then withHealthcheckArgs+=(-m "${!pingTimeout}"); fi
+  if [[ ! -z "${!pingkRetry-}" ]]; then withHealthcheckArgs+=(-r "${!pingkRetry}"); fi
+  if [[ "${!pingIncLog-1}" -ne 1 ]]; then withHealthcheckArgs+=(-D); fi
   httpPingArgs+=("${!checkUrl}")
 
-  checkInterval=${!checkInterval-"15m"}
   trap '{ echo -e "\nMiddleware interrupted. Killing all jobs..." ; kill $(jobs -p) 2>/dev/null; }' EXIT
   (
     trap "{ echo 'Terminated via parent EXIT'; exit; }" EXIT
