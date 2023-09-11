@@ -46,53 +46,53 @@ showUsage () {
     echo "check interval for first check you will use \"CHECK_INTERVAL_1=5m\"." 1>&2
     echo 1>&2
     echo "Available dynamic variables: (those listed with values are optional)" 1>&2
-    echo " CHECK_URL_#                      - REQUIRED; http(s) URL to query" 1>&2
-    echo " PING_URL_#                       - REQUIRED; url to ping service as accepted by" 1>&2
-    echo "                                    with-healthcheck util" 1>&2
-    echo " CHECK_INTERVAL_#=15m             - How ofter to visit CHECK_URL; accepts suffixes" 1>&2
-    echo "                                    s/m/h/d for seconds/minutes/hours/days." 1>&2
-    echo "                                    Fractions are supported but you can't combine" 1>&2
-    echo "                                    multiple different suffixes" 1>&2
-    echo " CHECK_OK_CODES_#=<val>           - Comma-separated list of HTTP codes considered" 1>&2
-    echo "                                    as \"success\" for CHECK_URL. Default value " 1>&2
-    echo "                                    determined by http-ping.sh" 1>&2
-    echo " CHECK_MATCH_CONTENT_#=<pattern>  - Ensures returned request content matches \"grep -e\"" 1>&2
-    echo "                                    pattern specified. Contents will only be matched on" 1>&2
-    echo "                                    \"successful\" HTTP codes." 1>&2
-    echo " CHECK_INSECURE_#=0               - Enables insecure HTTPS mode, in which SSL errors" 1>&2
-    echo "                                    like self-signed certs are ignored" 1>&2
-    echo " CHECK_TIMEOUT_#=<num>            - Time in seconds. Total time allotted for the" 1>&2
-    echo "                                    CHECK_URL response. The time includes ALL" 1>&2
-    echo "                                    retry attempts. Default value determined by" 1>&2
-    echo "                                    http-ping.sh" 1>&2
-    echo " CHECK_RETRY_#=<num>              - How many times to retry if calling CHECK_URL fails" 1>&2
-    echo "                                    for reasons other than response code being outside" 1>&2
-    echo "                                    of CHECK_OK_CODES. This usually includes DNS and" 1>&2
-    echo "                                    connection timeouts." 1>&2
-    echo " CHECK_FAILURE_THRESHOLD_#=1      - How many times the check has to fail before the failure " 1>&2
-    echo "                                    is reported to PING_URL. By default, which is recommended" 1>&2
-    echo "                                    in most cases, the threshold is 1; i.e. failures are reported" 1>&2
-    echo "                                    instantly. Setting this value >1 will cause success to be" 1>&2
-    echo "                                    reported instantly, while a failure signals will start to" 1>&2
-    echo "                                    be delivered only after configured number of consecutive" 1>&2
-    echo "                                    failures. Subsequent failures will be delivered without a" 1>&2
-    echo "                                    delay, until the counter is reset with array successful" 1>&2
-    echo "                                    check. The grace period configured for the ping server must" 1>&2
-    echo "                                    be configured to account for the threshold-introduced delay." 1>&2
-    echo "                                    When this option is used unexpected failures of \"with-healthcheck\"" 1>&2
-    echo "                                    cannot be distinguished from true HTTP endpoint failures." 1>&2
-    echo " CHECK_INC_CONTENT_#=1            - Whether to include contents returned by CHECK_URL" 1>&2
-    echo "                                    in the ping message. This option has no" 1>&2
-    echo "                                    effect if PING_INC_LOG_#=0, as the generated output" 1>&2
-    echo "                                    from http-ping will be discarded." 1>&2
-    echo " PING_TIMEOUT_#=<num>             - Time in seconds. Total time allotted for the" 1>&2
-    echo "                                    PING_URL response. The time includes ALL retry" 1>&2
-    echo "                                    attempts. Default value determined by" 1>&2
-    echo "                                    with-healthcheck.sh" 1>&2
-    echo " PING_RETRY_#=<num>               - How many times to retry if ping submission to" 1>&2
-    echo "                                    PING_URL fails. The failure can be for any reason." 1>&2
-    echo "                                    Default value determined by with-healthcheck.sh" 1>&2
-    echo " PING_INC_LOG_#=1                 - Whether the ping should include http-ping.sh logs." 1>&2
+    echo "  CHECK_URL_#                      - REQUIRED; http(s) URL to query" 1>&2
+    echo "  PING_URL_#                       - REQUIRED; url to ping service as accepted by" 1>&2
+    echo "                                     with-healthcheck util" 1>&2
+    echo "  CHECK_INTERVAL_#=15m             - How ofter to visit CHECK_URL; accepts suffixes" 1>&2
+    echo "                                     s/m/h/d for seconds/minutes/hours/days." 1>&2
+    echo "                                     Fractions are supported but you can't combine" 1>&2
+    echo "                                     multiple different suffixes" 1>&2
+    echo "  CHECK_OK_CODES_#=<val>           - Comma-separated list of HTTP codes considered" 1>&2
+    echo "                                     as \"success\" for CHECK_URL. Default value " 1>&2
+    echo "                                     determined by http-ping.sh" 1>&2
+    echo "  CHECK_MATCH_CONTENT_#=<pattern>  - Ensures returned request content matches \"grep -e\"" 1>&2
+    echo "                                     pattern specified. Contents will only be matched on" 1>&2
+    echo "                                     \"successful\" HTTP codes." 1>&2
+    echo "  CHECK_INSECURE_#=0               - Enables insecure HTTPS mode, in which SSL errors" 1>&2
+    echo "                                     like self-signed certs are ignored" 1>&2
+    echo "  CHECK_TIMEOUT_#=<num>            - Time in seconds. Total time allotted for the" 1>&2
+    echo "                                     CHECK_URL response. The time includes ALL" 1>&2
+    echo "                                     retry attempts. Default value determined by" 1>&2
+    echo "                                     http-ping.sh" 1>&2
+    echo "  CHECK_RETRY_#=<num>              - How many times to retry if calling CHECK_URL fails" 1>&2
+    echo "                                     for reasons other than response code being outside" 1>&2
+    echo "                                     of CHECK_OK_CODES. This usually includes DNS and" 1>&2
+    echo "                                     connection timeouts." 1>&2
+    echo "  CHECK_FAILURE_THRESHOLD_#=1      - How many times the check has to fail before the failure " 1>&2
+    echo "                                     is reported to PING_URL. By default, which is recommended" 1>&2
+    echo "                                     in most cases, the threshold is 1; i.e. failures are reported" 1>&2
+    echo "                                     instantly. Setting this value >1 will cause success to be" 1>&2
+    echo "                                     reported instantly, while a failure signals will start to" 1>&2
+    echo "                                     be delivered only after configured number of consecutive" 1>&2
+    echo "                                     failures. Subsequent failures will be delivered without a" 1>&2
+    echo "                                     delay, until the counter is reset with array successful" 1>&2
+    echo "                                     check. The grace period configured for the ping server must" 1>&2
+    echo "                                     be configured to account for the threshold-introduced delay." 1>&2
+    echo "                                     When this option is used unexpected failures of \"with-healthcheck\"" 1>&2
+    echo "                                     cannot be distinguished from true HTTP endpoint failures." 1>&2
+    echo "  CHECK_INC_CONTENT_#=1            - Whether to include contents returned by CHECK_URL" 1>&2
+    echo "                                     in the ping message. This option has no" 1>&2
+    echo "                                     effect if PING_INC_LOG_#=0, as the generated output" 1>&2
+    echo "                                     from http-ping will be discarded." 1>&2
+    echo "  PING_TIMEOUT_#=<num>             - Time in seconds. Total time allotted for the" 1>&2
+    echo "                                     PING_URL response. The time includes ALL retry" 1>&2
+    echo "                                     attempts. Default value determined by" 1>&2
+    echo "                                     with-healthcheck.sh" 1>&2
+    echo "  PING_RETRY_#=<num>               - How many times to retry if ping submission to" 1>&2
+    echo "                                     PING_URL fails. The failure can be for any reason." 1>&2
+    echo "                                     Default value determined by with-healthcheck.sh" 1>&2
+    echo "  PING_INC_LOG_#=1                 - Whether the ping should include http-ping.sh logs." 1>&2
     echo "                                    Disabling this will also inherently disables logging" 1>&2
     echo "                                    of the response content (see CHECK_INC_CONTENT)." 1>&2
     echo 1>&2
