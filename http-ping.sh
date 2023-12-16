@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# (c) Gregory Zdanowski-House
+# (c) Gregory House
 # Licensed under GPLv2.0 by https://github.com/kiler129
 set -e -o errexit -o pipefail -o noclobber -o nounset
 cd "$(dirname "$0")"
@@ -10,7 +10,7 @@ maxTime=5
 maxRetry=0
 
 # Script options
-version="2023091001"
+version="2023121601"
 homeUrl="https://github.com/kiler129/server-healthchecks"
 updateUrl="https://raw.githubusercontent.com/kiler129/server-healthchecks/main/http-ping.sh"
 
@@ -30,7 +30,10 @@ showUsage () {
     echo "Options:" 1>&2
     echo "  -c <codes>    List of comma-separated HTTP codes considered successful" 1>&2
     echo "                Default: $okHttpCodes" 1>&2
-    echo "  -g <pattern>  Consider success only if grep in pattern mode (-e) matches the output." 1>&2
+    echo "  -g <pattern>  Consider success only if grep in pattern mode (-e) DOES match the output." 1>&2
+    echo "                For this option to work your system must provide grep/BusyBox with grep." 1>&2
+    echo "                The output is checked only if HTTP code indicates success." 1>&2
+    echo "  -G <pattern>  Consider success only if grep in pattern mode (-e) DOES NOT match the output." 1>&2
     echo "                For this option to work your system must provide grep/BusyBox with grep." 1>&2
     echo "                The output is checked only if HTTP code indicates success." 1>&2
     echo "  -p            Print output of the request"
@@ -127,10 +130,12 @@ selfUpdate () {
 printOutput=0
 checkSsl=0
 outputMatch=''
-while getopts ':c:g:pim:r:uh' opt; do
+outputNotMatch=''
+while getopts ':c:g:G:pim:r:uh' opt; do
     case "$opt" in
         c) okHttpCodes="$OPTARG" ;;
         g) outputMatch="$OPTARG" ;;
+        G) outputNotMatch="$OPTARG" ;;
         p) printOutput=1 ;;
         i) checkSsl=0 ;;
         m) if [[ "$OPTARG" =~ [^0-9] ]]; then
@@ -170,18 +175,11 @@ response=""
 httpCode=""
 errors=""
 callUrl "$checkUrl" $checkSsl $maxTime $maxRetry httpCode response errors
-if [[ " ${okHttpCodesArr[*]} " =~ " ${httpCode} " ]]; then # the HTTP code indicates no error
-  if [[ -z "${outputMatch}" ]]; then # contents will not be checked
-    echo "Request succeeded with code $httpCode"
-    exitCode=0
-  elif echo "${response}" | grep -q -e "${outputMatch}" ; then # output matching requested & output matched
-    echo "Request succeeded with code $httpCode and matching contents"
-    exitCode=0
-  else # contents requested to be checked but it didn't match
-    echo "Request failed: the $httpCode indicated success but the contents did not match expected pattern \"${outputMatch}\""
-    exitCode=1
-  fi
 
+### First, determine if HTTP request status on the basis of metadata
+if [[ " ${okHttpCodesArr[*]} " =~ " ${httpCode} " ]]; then # the HTTP code indicates no error
+  echo "HTTP request succeeded with code $httpCode"
+  exitCode=0
 elif [[ "$httpCode" -eq "000" ]]; then
   if [[ -z "$errors" ]]; then
     echo "Request failed without a response - no additional details are available"
@@ -192,6 +190,27 @@ elif [[ "$httpCode" -eq "000" ]]; then
 else
   echo "Request failed with HTTP code $httpCode"
   exitCode=1
+fi
+
+### Next, take care of content matching (is possible still)
+if [[ ! -z "${outputMatch}" ]] && [[ $exitCode -eq 0 ]]; then # positive output matching requested & possible
+  if echo "${response}" | grep -q -e "${outputMatch}" ; then # output matched positive regex => pass
+    echo "The response contents matched expected pattern \"${outputMatch}\""
+    exitCode=0
+  else
+    echo "HTTP ping failed: the $httpCode indicated success but the contents did not match expected pattern \"${outputMatch}\""
+    exitCode=1
+  fi
+fi
+
+if [[ ! -z "${outputNotMatch}" ]] && [[ $exitCode -eq 0 ]]; then # negative output matching requested & possible
+  if ! echo "${response}" | grep -q -e "${outputNotMatch}" ; then # output matched negative regex => fail
+    echo "The response contents did not match prohibited pattern \"${outputNotMatch}\""
+    exitCode=0
+  else
+    echo "HTTP ping failed: the $httpCode indicated success but the contents matched prohibited pattern \"${outputNotMatch}\""
+    exitCode=1
+  fi
 fi
 
 # this can happen even if request succeeded (e.g. warning about SSL etc)
