@@ -9,7 +9,7 @@ maxTime=10 # see option -m help
 maxRetry=5 # see option -r help
 
 # Script options
-version="2023091003"
+version="2024021301"
 updateUrl="https://raw.githubusercontent.com/kiler129/server-healthchecks/main/with-healthcheck.sh"
 homeUrl="https://github.com/kiler129/server-healthchecks"
 
@@ -85,7 +85,7 @@ showUsage () {
 # Prints: error message & help
 # Return: always 1
 showUsageError () {
-    echo -e "Error: $1\n---\n" 1>&2
+    echo -e "Error: $@\n---\n" 1>&2
     showUsage "$0"
     exit 1
 }

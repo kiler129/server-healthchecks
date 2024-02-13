@@ -10,7 +10,7 @@ maxTime=5
 maxRetry=0
 
 # Script options
-version="2023121601"
+version="2024021301"
 homeUrl="https://github.com/kiler129/server-healthchecks"
 updateUrl="https://raw.githubusercontent.com/kiler129/server-healthchecks/main/http-ping.sh"
 
@@ -53,7 +53,7 @@ showUsage () {
 # Prints: error message & help
 # Return: always 1
 showUsageError () {
-    echo -e "Error: $1\n---\n" 1>&2
+    echo -e "Error: $@\n---\n" 1>&2
     showUsage "$0"
     exit 1
 }
