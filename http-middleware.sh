@@ -4,7 +4,7 @@
 set -e -o errexit -o pipefail -o noclobber -o nounset
 cd "$(dirname "$0")"
 
-version="2024021301"
+version="2024021302"
 homeUrl="https://github.com/kiler129/server-healthchecks"
 updateUrl="https://raw.githubusercontent.com/kiler129/server-healthchecks/main/http-middleware.sh"
 httpPingUrl="https://raw.githubusercontent.com/kiler129/server-healthchecks/main/http-ping.sh"
@@ -90,6 +90,10 @@ showUsage () {
     echo "                                         When this option is used, unexpected failures of " 1>&2
     echo "                                         \"with-healthcheck\" script cannot be distinguished from true " 1>&2
     echo "                                         HTTP endpoint failures." 1>&2
+    echo "  CHECK_FAILURE_UNDERTHRESHOLD_LOG_#=0 - When using CHECK_FAILURE_THRESHOLD_# the errors are silenced " 1>&2
+    echo "                                         completely until failure threshold is achieved. With this " 1>&2
+    echo "                                         option enabled (=1) any failure before the threshold is " 1>&2
+    echo "                                         submitted as log-only event instead. " 1>&2
     echo "  CHECK_INC_CONTENT_#=1                - Whether to include contents returned by CHECK_URL" 1>&2
     echo "                                         in the ping message. This option has no" 1>&2
     echo "                                         effect if PING_INC_LOG_#=0, as the generated output" 1>&2
@@ -237,18 +241,19 @@ for((i=0; i<=$loopMax; i++)); do
 
   # This cannot be done without intermediates (unless eval is utilized), as bash doesn't allow indirection with
   # composite variable. The best compromise is probably using a function (even if slow-ish).
-  resolveConfigValue checkInterval         CHECK_INTERVAL           $i   '15m'
-  resolveConfigValue checkOkCodes          CHECK_OK_CODES           $i
-  resolveConfigValue checkMatchContent     CHECK_MATCH_CONTENT      $i
-  resolveConfigValue checkNotMatchContent  CHECK_NOT_MATCH_CONTENT  $i
-  resolveConfigValue checkInsecure         CHECK_INSECURE           $i   0
-  resolveConfigValue checkTimeout          CHECK_TIMEOUT            $i
-  resolveConfigValue checkRetry            CHECK_RETRY              $i
-  resolveConfigValue checkFailureThreshold CHECK_FAILURE_THRESHOLD  $i   1
-  resolveConfigValue checkIncContent       CHECK_INC_CONTENT        $i   1
-  resolveConfigValue pingTimeout           PING_TIMEOUT             $i
-  resolveConfigValue pingRetry             PING_RETRY               $i
-  resolveConfigValue pingIncLog            PING_INC_LOG             $i   1
+  resolveConfigValue checkInterval          CHECK_INTERVAL                    $i   '15m'
+  resolveConfigValue checkOkCodes           CHECK_OK_CODES                    $i
+  resolveConfigValue checkMatchContent      CHECK_MATCH_CONTENT               $i
+  resolveConfigValue checkNotMatchContent   CHECK_NOT_MATCH_CONTENT           $i
+  resolveConfigValue checkInsecure          CHECK_INSECURE                    $i   0
+  resolveConfigValue checkTimeout           CHECK_TIMEOUT                     $i
+  resolveConfigValue checkRetry             CHECK_RETRY                       $i
+  resolveConfigValue checkFailureThreshold  CHECK_FAILURE_THRESHOLD           $i   1
+  resolveConfigValue checkUnderthresholdLog CHECK_FAILURE_UNDERTHRESHOLD_LOG  $i   0
+  resolveConfigValue checkIncContent        CHECK_INC_CONTENT                 $i   1
+  resolveConfigValue pingTimeout            PING_TIMEOUT                      $i
+  resolveConfigValue pingRetry              PING_RETRY                        $i
+  resolveConfigValue pingIncLog             PING_INC_LOG                      $i   1
 
   if [[ -n "$checkOkCodes" ]];         then httpPingArgs+=(-c "$checkOkCodes"); fi
   if [[ -n "$checkMatchContent" ]];    then httpPingArgs+=(-g "$checkMatchContent"); fi
@@ -262,9 +267,12 @@ for((i=0; i<=$loopMax; i++)); do
     # to distinguish these two
     withHealthcheckArgs+=(-X)
   elif [[ ! "$checkFailureThreshold" =~ ^[0-9]$ ]] || [[ "$checkFailureThreshold" -le 0 ]]; then
-    echo "Check failure threshold must be a positive integer (got \"$checkFailureThreshold\" for job #$i)"
-    showUsage
-    exit 1
+    showUsageError "Check failure threshold must be a positive integer (got \"$checkFailureThreshold\" for job #$i)"
+  fi
+  if [[ "$checkUnderthresholdLog" -eq 1 ]] && [[ "$checkFailureThreshold" -le 1 ]]; then
+    showUsageError "Under-threshold failure logging has been requested (CHECK_FAILURE_UNDERTHRESHOLD_LOG) for job #$i.\n" \
+      "However, the failure threshold (CHECK_FAILURE_THRESHOLD) is lower or equal to 1, effectively threshold\n" \
+      "mechanism. This looks like a configuration mistake."
   fi
   if [[ "$checkIncContent" -eq 1 ]]; then httpPingArgs+=(-p); fi
   if [[ -n "$pingTimeout" ]];        then withHealthcheckArgs+=(-m "$pingTimeout"); fi
@@ -294,7 +302,13 @@ for((i=0; i<=$loopMax; i++)); do
         if [[ $debugMode -eq 1 ]]; then
           echo "Running with failure tolerance: failed $failureCounter times so far (will report at $checkFailureThreshold)"
         fi
-        "${withHealthcheckArgs[@]}" -s "${!pingUrl}" "${httpPingArgs[@]}" 2>&1 || exit=$?
+        if [[ $checkUnderthresholdLog -eq 1 ]]; then # under threshold, but logging requested
+          if [[ $debugMode -eq 1 ]]; then echo "FAILURE_UNDERTHRESHOLD_LOG enabled - sending log-only if fails"; fi
+          "${withHealthcheckArgs[@]}" -l "${!pingUrl}" "${httpPingArgs[@]}" 2>&1 || exit=$?
+        else # under thresholds, no logging requested => silence
+          if [[ $debugMode -eq 1 ]]; then echo "FAILURE_UNDERTHRESHOLD_LOG disabled - silencing if fails"; fi
+          "${withHealthcheckArgs[@]}" -s "${!pingUrl}" "${httpPingArgs[@]}" 2>&1 || exit=$?
+        fi
       else # either failure tolerance is disabled (threshold=1) OR counter indicates threshold-1 failures already
         # always show the info message in debug mode, but also show it in non-debug when the job failed after threshold
         if [[ $checkFailureThreshold -gt 1 ]]; then
