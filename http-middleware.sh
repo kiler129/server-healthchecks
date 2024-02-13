@@ -4,7 +4,7 @@
 set -e -o errexit -o pipefail -o noclobber -o nounset
 cd "$(dirname "$0")"
 
-version="2023121601"
+version="2024021301"
 homeUrl="https://github.com/kiler129/server-healthchecks"
 updateUrl="https://raw.githubusercontent.com/kiler129/server-healthchecks/main/http-middleware.sh"
 httpPingUrl="https://raw.githubusercontent.com/kiler129/server-healthchecks/main/http-ping.sh"
@@ -114,6 +114,16 @@ showUsage () {
     echo "  when neither value for the given instance nor default are set (e.g. \"http-ping\" default timeout)." 1>&2
     echo 1>&2
     echo "Found a bug? Have a question? Head out to $homeUrl"
+}
+
+# Displays error message & script usage help, then exits with error
+# Params: messageToDisplay
+# Prints: error message & help
+# Return: always 1
+showUsageError () {
+    echo -e "Error: $@\n---\n" 1>&2
+    showUsage "$0"
+    exit 1
 }
 
 # Locates a named tool
