@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Checks ZFS datasets key statuts and report these with key
+# Checks ZFS datasets key status and report these with key
 # available/unavailable
 #
 # This tool will check ZFS filesystems (mountable datasets) and
@@ -10,7 +10,7 @@
 # but exit code indicates success. If the system contains no
 # encrypted datasets, this fact will be reported in the output
 # but it will not be treated as an error, so that this script
-# can be easily deployed to all systems, reagrdless of their
+# can be easily deployed to all systems, regardless of their
 # [current] usage of ZFS encryption.
 #
 # By default this tool will check all datasets, but you can only
@@ -19,8 +19,8 @@
 #
 # Usage: zfs-keystatus [datasetName]
 #
-# (c) Gregory Zdanowski-House
-# Licensed under GPLv2.0 by https://github.com/kiler129
+# (c) Gregory House
+# Licensed under GPLv2.0 by https://github.com/kiler129/server-healthchecks
 set -e -o errexit -o pipefail -o noclobber -o nounset
 
 zstatus=$(/sbin/zfs get -r -o name,value -t filesystem,volume keystatus "$@" | awk '$2 != "-"')
