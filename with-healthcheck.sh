@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# HealthCheck script wrapper (c) Gregory Zdanowski-House
+# HealthCheck script wrapper (c) Gregory House
 # Licensed under GPLv2.0 by https://github.com/kiler129
 set -e -o errexit -o pipefail -o noclobber -o nounset
 cd "$(dirname "$0")"
@@ -9,7 +9,7 @@ maxTime=10 # see option -m help
 maxRetry=5 # see option -r help
 
 # Script options
-version="2024021302"
+version="2025053101"
 updateUrl="https://raw.githubusercontent.com/kiler129/server-healthchecks/main/with-healthcheck.sh"
 homeUrl="https://github.com/kiler129/server-healthchecks"
 
