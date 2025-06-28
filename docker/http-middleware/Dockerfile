@@ -16,5 +16,6 @@ RUN chmod +x /usr/local/bin/docker-entrypoint && \
     curl -o /app/http-middleware 'https://raw.githubusercontent.com/kiler129/server-healthchecks/main/http-middleware.sh' && \
     chmod +x /app/*
 
+HEALTHCHECK CMD sh -c "ps -e -o args= | grep -q '^bash /app/'" || exit 1
 ENTRYPOINT ["/sbin/tini", "--", "docker-entrypoint"]
 CMD ["/app/http-middleware"]
